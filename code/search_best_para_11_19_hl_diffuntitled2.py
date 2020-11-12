@@ -760,13 +760,13 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
             out_log.write('股票601700总市值<= '+str(totals1)+'\n')
             flag_601700 = False
         if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('日线数据里没有300480这只股票\n')
+            out_log.write('股票300480总市值<= '+str(totals1)+'\n')
             flag_300480  = False
         if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('日线数据里没有300493这只股票\n')
+            out_log.write('股票300493总市值<= '+str(totals1)+'\n')
             flag_300493  = False
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('日线数据里没有603626这只股票\n')
+            out_log.write('股票603626总市值<= '+str(totals1)+'\n')
             flag_603626  = False
         #根据policy3选取股票 买入前两天到达的涨幅 最高收盘-最低开盘/最低开盘
         choose_matrix = choose_matrix[choose_matrix[:,3] < policy3]
@@ -873,71 +873,71 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
             flag_603626  = False
         
         choose_matrix1 = choose_matrix1[choose_matrix1[:,9] > turnover*(1-para2)]
-        if('002512' not in  choose_matrix1[:,9] and flag_2512 ):
+        if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 换手率 <= '+str(turnover*(1-para2))+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,9] and flag_601700):
+        if('601700' not in  choose_matrix1[:,1] and flag_601700):
             out_log.write('股票601700 换手率 <= '+str(turnover*(1-para2))+'\n')
             flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,9] and flag_300480):
+        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
             out_log.write('股票300480 换手率 <= '+str(turnover*(1-para2))+'\n')
             flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,9] and flag_300493):
+        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
             out_log.write('股票300493 换手率 <= '+str(turnover*(1-para2))+'\n')
             flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,9] and flag_603626):
+        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 换手率 <= '+str(turnover*(1-para2))+'\n')
             flag_603626  = False
         
         choose_matrix1 = choose_matrix1[choose_matrix1[:,14] > top10sh*(1-para1)]
-        if('002512' not in  choose_matrix1[:,14] and flag_2512 ):
+        if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,14] and flag_601700):
+        if('601700' not in  choose_matrix1[:,1] and flag_601700):
             out_log.write('股票601700 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
             flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,14] and flag_300480):
+        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
             out_log.write('股票300480 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
             flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,14] and flag_300493):
+        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
             out_log.write('股票300493 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
             flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,14] and flag_603626):
+        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
             flag_603626  = False
         
         #增加价格筛选 即对于股票昨日收盘价格进行筛选
         choose_matrix1 = choose_matrix1[choose_matrix1[:,10] <= price_up]
-        if('002512' not in  choose_matrix1[:,10] and flag_2512 ):
+        if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 price_up >'+str(price_up)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,10] and flag_601700):
+        if('601700' not in  choose_matrix1[:,1] and flag_601700):
             out_log.write('股票601700 price_up >'+str(price_up)+'\n')
             flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,10] and flag_300480):
+        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
             out_log.write('股票300480 price_up >'+str(price_up)+'\n')
             flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,10] and flag_300493):
+        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
             out_log.write('股票300493 price_up >'+str(price_up)+'\n')
             flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,10] and flag_603626):
+        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 price_up >'+str(price_up)+'\n')
             flag_603626  = False
         
         choose_matrix1 = choose_matrix1[choose_matrix1[:,10] >= price_down]
-        if('002512' not in  choose_matrix1[:,10] and flag_2512 ):
+        if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 price_down <'+str(price_down)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,10] and flag_601700):
+        if('601700' not in  choose_matrix1[:,1] and flag_601700):
             out_log.write('股票601700 price_down <'+str(price_down)+'\n')
             flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,10] and flag_300480):
+        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
             out_log.write('股票300480 price_down <'+str(price_down)+'\n')
             flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,10] and flag_300493):
+        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
             out_log.write('股票300493 price_down <'+str(price_down)+'\n')
             flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,10] and flag_603626):
+        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 price_down <'+str(price_down)+'\n')
             flag_603626  = False
         #新增
