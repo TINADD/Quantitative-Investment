@@ -15,6 +15,7 @@ import pandas as pd
 import datetime
 import time
 import numpy as np
+import sys
 
 def mkdir(path):
  
@@ -32,6 +33,8 @@ def mkdir(path):
 token = '92fa5b4defcb65d71defd90b46b240ad77860cc3c0ec0958e492172d'
 ts.set_token(token)
 
+cur_dir_path = os.path.dirname(os.path.realpath(sys.argv[0]))
+print(cur_dir_path)
 
 #给定下载日期，比如要测试19年11月到现在的数据，需要从19年10月开始下载
 #获取20191101-20200620之间的股票数据
@@ -80,191 +83,7 @@ fq_stocks = pd.DataFrame()#所有股票的复权因子
 cq_stocks_list = []
 #Error stock list 
 error_list = []
-'''
-for code in data['ts_code']:
-    if code in Get_info_list:
-        continue
-    elif os.path.exists(single_path + code + '.csv') and os.path.getsize(single_path + code + '.csv')>1000:
-            print('股票日线数据已存在',code)
-            #continue
-    else:
-        pass
-    print ('当前股票代码==',code)
-    try:
-        #获取股票代码==code的在[start_date,end_date]的日线数据
-        code_df = pro.daily(ts_code=code, start_date=start_date_bef, end_date=end_date)
-    except:
-        #如果获取数据超时，停0.2秒重新获取
-        time.sleep(0.2)
-        code_df = pro.daily(ts_code=code, start_date=start_date_bef, end_date=end_date)
 
-    #add turnover info 增加换手率信息
-    try:
-        tr_df = pro.daily_basic(ts_code=code, start_date=start_date_bef, end_date=end_date, fields='ts_code,trade_date,turnover_rate,total_share')
-    except:
-        time.sleep(0.2)
-        tr_df = pro.daily_basic(ts_code=code, start_date=start_date_bef, end_date=end_date, fields='ts_code,trade_date,turnover_rate,total_share')
-
-    #合并上面获取的单只股票的日线数据    
-    code_df = pd.merge(code_df,tr_df,how='left',on=['trade_date','ts_code'])
-    #将code股票的未复权的日线数据存到对应的文件中
-    code_df.to_csv(single_path_source + code + '.csv')
-    
-    daily_stocks_source = pd.concat([daily_stocks_source,code_df])
-    #如果除权 则对日线价格进行复权处理
-    try:
-        fq_df = pro.adj_factor(ts_code=code, start_date=start_date_bef, end_date=end_date)
-    except:
-        time.sleep(0.2)
-        fq_df = pro.adj_factor(ts_code=code, start_date=start_date_bef, end_date=end_date)
-    fq_df.to_csv(fq_path + code + '.csv')
-
-    fq_df = fq_df[fq_df['trade_date']>=start_date_bef]
-    fq_df = fq_df[fq_df['trade_date']<=end_date]
-    
-    fq_stocks = pd.concat([fq_stocks,fq_df])
-    try:
-        tmp_min = min(fq_df['adj_factor'])
-    except ValueError:
-        error_list.append(code)
-        continue
-    tmp_max = max(fq_df['adj_factor'])
-    if tmp_min == tmp_max:  #code股票不需要除权操作
-        pass
-    else:
-        cq_stocks_list.append(code)
-        try:
-            fq_df['New_factor'] = fq_df.loc[0,'adj_factor']
-        except KeyError:
-            error_list.append(code)
-            continue
-        fq_df['factor_rate'] = fq_df['adj_factor']/fq_df['New_factor']
-        fq_df.drop(['adj_factor','New_factor'],axis=1,inplace=True)
-        fq_df['trade_date'] = pd.to_datetime(fq_df['trade_date'],format="%Y%m%d")
-
-        code_df['trade_date'] = pd.to_datetime(code_df['trade_date'])
-        code_df = pd.merge(code_df,fq_df,on=['ts_code','trade_date'],how='left')
-        code_df['close'] = code_df['close'] * code_df['factor_rate']
-        code_df['open'] = code_df['open'] * code_df['factor_rate']
-        code_df['high'] = code_df['high'] * code_df['factor_rate']
-        code_df['low'] = code_df['low'] * code_df['factor_rate']
-        #增加对成交量的复权处理
-        code_df['vol'] = code_df['vol'] / code_df['factor_rate']
-    
-    #前12个交易日涨幅 前5个交易日的成交量
-    for i in range(1,13):
-        code_df['cp' + str(i)] = code_df['pct_chg'].shift(-i) #列元素分别向上移动i行
-    for j in range(1,6):
-        code_df['vol' + str(j)] = code_df['vol'].shift(-j)
-    code_df['cp_count_s'] = (code_df['cp1']>0).astype(int) + (code_df['cp2']>0).astype(int) + (code_df['cp3']>0).astype(int) + (code_df['cp4']>0).astype(int) + (code_df['cp5']>0).astype(int)
-    code_df['cp_count_s'].describe()
-    
-     #前12个交易日的涨幅之和 和 涨幅为正的个数
-    code_df['cp_count_l'] = 0
-    code_df['cp_sum_twe'] = 0
-    
-    for i in range(1,13):
-        code_df['cp_count_l'] = code_df['cp_count_l'] + (code_df['cp' + str(i)]>0).astype(int)
-        code_df['cp_sum_twe'] = code_df['cp_sum_twe'] + code_df['cp'+str(i)]
-    #更改五日涨幅的指标
-    code_df['cp_sum_five'] = 0
-    for j in range(1,6):
-        code_df['cp_sum_five'] = code_df['cp_sum_five'] + code_df['cp'+str(j)]
-        
-    #后两个交易日
-    code_df['day_tomo'] = code_df['trade_date'].shift(1) #列对应的内容下移
-    code_df['day_aftertomo'] = code_df['trade_date'].shift(2)
-    #code_df['tr_choose'] = code_df['turnover_rate'].shift(-1)
-    
-    #选股当天的换手率
-    code_df['tr_before'] = code_df['turnover_rate'].shift(-1)
-    
-    #前两天最高 前三天收盘 得到policy3
-    code_df['high1'] = code_df['high'].shift(-1)
-    code_df['high2'] = code_df['high'].shift(-2)
-    code_df['open1'] = code_df['open'].shift(-1)
-    code_df['open2'] = code_df['open'].shift(-2)
-    code_df['close1'] = code_df['close'].shift(-1)
-    code_df['close2'] = code_df['close'].shift(-2)
-    code_df['close3'] = code_df['close'].shift(-3)
-    code_df['ch1'] = (code_df['high1'] - code_df['close2'])/code_df['close2']
-    code_df['ch2'] = (code_df['high2'] - code_df['close3'])/code_df['close3']
-    #买入前两天的收盘最高价-买入前两天开盘最低价/买入前两天开盘最低价
-    code_df['policy3'] = (code_df[['close1','close2']].max(axis=1)-code_df[['open1','open2']].min(axis=1))/code_df[['open1','open2']].min(axis=1)
-    
-    #前30天最高价
-    try:
-        code_df['trade_date'] = code_df['trade_date'].apply(lambda x:datetime.datetime.strptime(x,'%Y%m%d'))
-    except:
-        pass
-    code_df['close_highest'] = 0
-    #code_df['highest'] = 0
-    code_df['close_lowest'] = 0
-
-    for i in range(0,code_df.shape[0]-22,1):
-        tmp_df = code_df[(i+1):(i+23)]
-        try:
-            code_df.loc[i,'close_highest'] = max(tmp_df['close'])
-        except ValueError:
-            code_df.loc[i,'close_highest'] = np.nan
-        try:
-            code_df.loc[i,'close_lowest'] = min(tmp_df['close'])
-        except ValueError:
-            code_df.loc[i,'close_lowest'] = np.nan
-
-    code_df['policy1'] = (code_df['close_highest'] - code_df['close1'])/code_df['close1']
-        
-    code_df['policy2'] = code_df['vol1']/code_df['vol2']
-    
-    code_df['cp_count_s'] = (code_df['cp1']>0).astype(int) + (code_df['cp2']>0).astype(int) + (code_df['cp3']>0).astype(int) + (code_df['cp4']>0).astype(int) + (code_df['cp5']>0).astype(int)
-    code_df['cp_count_s'].describe()
-    
-     #前12个交易日的涨幅之和 和 涨幅为正的个数
-    code_df['cp_count_l'] = 0
-    code_df['cp_sum_twe'] = 0
-    
-    for i in range(1,13):
-        code_df['cp_count_l'] = code_df['cp_count_l'] + (code_df['cp' + str(i)]>0).astype(int)
-        code_df['cp_sum_twe'] = code_df['cp_sum_twe'] + code_df['cp'+str(i)]
-#    code_df['cp_sum_five'] = 0
-#    code_df['cp_sum_five'] = code_df['cp1'] + code_df['cp2'] + code_df['cp3'] + code_df['cp4'] + code_df['cp5']
-        
-    try:
-        code_df.drop(['cp_sum'],axis=1,inplace=True)
-        code_df.drop(['Unnamed: 0'],axis=1,inplace=True)
-    except:
-        pass
-    
-    #计算不同方式计算的均价
-    code_df['amount1'] = code_df['amount'].shift(-1)
-    code_df['low1'] = code_df['low'].shift(-1)
-    code_df['open1'] = code_df['open'].shift(-1)
-    code_df['mean_price'] = (code_df['amount1']/code_df['vol1'])*10
-    code_df['mean_price_hl'] = (code_df['high1'] + code_df['low1'])/2
-    code_df['mean_price_oc'] = (code_df['open1'] + code_df['close1'])/2
-    code_df['mean_sig'] = code_df['mean_price']/code_df['high1']
-    
-    #得到卖出当天是否会开盘涨停的信息
-    code_df['high_tomo'] = code_df['high'].shift(1)
-    code_df['low_tomo'] = code_df['low'].shift(1)
-    code_df['after_sign'] = (code_df['high_tomo'] == code_df['low_tomo'])
-    code_df['h_l_diff'] = (code_df['close_highest'] - code_df['close_lowest'])/code_df['close_lowest']
-    
-    #将单只复权后的股票存到对应的路径
-    code_df.to_csv(single_path + code + '.csv')
-
-    daily_stocks = pd.concat([daily_stocks,code_df])
-    #final_df = pd.concat([final_df,code_df])
-    Get_info_list.append(code)
-    time.sleep(1)
-    
-print('将所有股票的日线数据保存到一个文件中')    
-#保存初次合成结果
-daily_stocks.to_csv(daily_path + 'tmpDaily.csv') #复权后
-#final_df.to_csv(daily_path + 'source_daily.csv')
-daily_stocks_source.to_csv(single_path_source + 'tmpDailySource.csv') #未复权
-#final_source_df.to_csv(single_path_source + 'source_daily.csv')
-'''
 daily_stocks = pd.read_csv(daily_path + 'tmpDaily.csv')
 daily_stocks_source = pd.read_csv(single_path_source + 'tmpDailySource.csv')
 '''注意已经有原始价格了，不需要再下载一次了，直接对final_source_df和final_df进行操作。需补上这段代码。'''
@@ -304,7 +123,8 @@ print(daily_stocks_tmp[daily_stocks_tmp['ts_code'] == '300330.SZ']['totals1'])
 daily_stocks = daily_stocks_tmp
 
 #添加上市时间信息 以及筛选
-info_df = pd.read_csv('F:/SmartLab/量化投资/version2.0/version2.0/code/stock_info_1007.csv')
+#info_df = pd.read_csv('F:/SmartLab/量化投资/version2.0/version2.0/code/stock_info_1007.csv')
+info_df = data
 daily_stocks = pd.merge(daily_stocks,info_df,on=['ts_code'],how='left')
 print("3 daily_stocks['totals1'] \n")
 print(daily_stocks[daily_stocks['ts_code'] == '300330.SZ']['totals1'])
@@ -330,12 +150,49 @@ def FormatTime(str_x):
         return pd.to_datetime(str_x)
     
 #添加10大股东信息
-top10_df = pd.read_csv('F:/SmartLab/量化投资/version2.0/version2.0/code/top10_1007.csv')
+top10_df = pd.read_csv(cur_dir_path+'/top10_1116.csv')
 #top10_df.head()
 #print("top10_df",top10_df)
-
+'''
+top10_df = pd.DataFrame()
+print('top10',daily_stocks_tmp.columns)
+for code in daily_stocks_tmp['ts_code'] :
+    print(code)
+    for day in daily_stocks_tmp[daily_stocks_tmp['ts_code'] == code]['datetime'] :
+        end_time = FormatTime(day)
+        beg_time =  end_time - datetime.timedelta(months=3)
+        try:
+            #获取股票code的十大股东
+            time.sleep(0.1)
+            df = pro.top10_holders(ts_code=code,start_date=beg_time,end_date=end_time)
+        except:
+            #如果获取数据超时，停0.2秒重新获取
+            time.sleep(2)
+            df = pro.top10_holders(ts_code=code,start_date=beg_time,end_date=end_time)
+        if df.empty:
+            continue
+        #选取最新的几个股东求和hold_ratio
+        df = df[df['ann_date'] == df.iloc[0,1]]
+        df = df[df['end_date'] == df.iloc[0,2]]
+        df = df.drop_duplicates(['holder_name'])
+        df['hold_ratio'] = df['hold_ratio'].sum()
+        df = df.drop_duplicates(['hold_ratio'])
+        print(df['hold_ratio'],daily_stocks_tmp['ts_code'])
+        daily_stocks_tmp[daily_stocks_tmp['ts_code'] == code and daily_stocks_tmp['datetime'] == day]['top10sh'] = df['hold_ratio'] 
+        df = df[['ts_code','hold_ratio']]
+        #print(df)
+        top10_df = pd.concat([top10_df,df])
+        #print(top10_holders)
+        #top10_holders.to_csv(stock_saved_path+'top10_1007.csv',index=False)
+    
+    
+    
+top10_df['top10_d_r'] = top10_df['hold_ratio']
+'''
 top10_df['ts_code'] = top10_df['ts_code'].apply(lambda x:int(x.replace('.SZ','').replace('.SH','')))
+
 daily_stocks_tmp['ts_code'] = daily_stocks_tmp['ts_code'].apply(lambda x:int(x.replace('.SZ','').replace('.SH','')))
+
 #final_df1['ts_code'] = final_df1['ts_code'].apply(lambda x:int(x.replace('.SZ','').replace('.SH','')))
 
 daily_stocks_tmp = pd.merge(daily_stocks_tmp,top10_df,on=['ts_code'],how='left')
