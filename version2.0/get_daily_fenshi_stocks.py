@@ -30,18 +30,19 @@ pro = ts.pro_api()
 
 #给定下载日期，比如要测试19年11月到现在的数据，需要从19年10月开始下载
 #获取20200101-20201001之间的股票数据[0101,1001)
-start_date_bef = '20201001' #从当前日期开始下载
+start_date_bef = '20201006' #从当前日期开始下载
 start_date_rel = '20201101' #实际需要的起始日期
-end_date = '20201204' #实际的要获取股票数据的结束日期,获取结果不含该日期
+end_date = '20201206' #实际的要获取股票数据的结束日期,获取结果不含该日期
 
-top10_path = 'E:/HUST/量化投资/Quantitative-Investment/version2.0/top10.csv'
-saved_path = 'E:/Stock/version2.0/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
+top10_path = '../../stockData/top10.csv'
+saved_path = '../../stockData/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
 daily_path = saved_path+'DailySingle/' #日线数据存储路径，一只股票一个文件
 fenshi_path = saved_path+'Fenshi/'
 mkdir(saved_path)
 mkdir(daily_path)
 mkdir(fenshi_path)
 
+#只获取上市的公司股票code
 #只获取上市的公司股票code
 def get_minute_data():
     stock_basic = pro.stock_basic(exchange_id='', is_hs='',list_status='L', fields='ts_code,industry,list_date')
@@ -73,10 +74,16 @@ def get_minute_data():
         code_min = code_min[code_min.time<='11:00:00']
         code_min = code_min[['trade_time','ts_code','open','close','high','low','date','time']]
         stocks_minute = pd.concat([stocks_minute,code_min])
+    #stocks_minute['ts_code'] =stocks_minute['ts_code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
+    #修改列名
+    #stocks_minute.rename(columns={'trade_time':'datetime','ts_code':'code'},inplace=True)
     print('写分时数据...')    
     stocks_minute.to_csv(saved_path+'Fenshi'+start_date_rel+'-'+end_date+'.csv')
+
 def get_daily_data():
     stocks_daily = pd.DataFrame() #记录所有股票的日线数据
+    stocks_daily_source = pd.DataFrame()
+
     stock_basic = pro.stock_basic(exchange_id='', is_hs='',list_status='L', fields='ts_code,industry,list_date')
     
     for code in stock_basic['ts_code']:
@@ -86,7 +93,7 @@ def get_daily_data():
             #'change', 'pct_chg', 'vol', 'amount', 'turnover_rate'],dtype='object')
             code_daily = ts.pro_bar(ts_code=code, adj='qfq', start_date=start_date_bef, end_date=end_date,factors=['tor'])
         except:
-            time.sleep(0.2) #休眠0.5s
+            time.sleep(0.2) #休眠0.2s
             code_daily = ts.pro_bar(ts_code=code, adj='qfq', start_date=start_date_bef, end_date=end_date,factors=['tor'])
         #增加换手率信息
         try:
@@ -129,21 +136,25 @@ def get_daily_data():
         code_daily = pd.merge(code_daily,top10_df,how='left',on=['ts_code'])
         
         #得到总市值信息
-        code_daily['totals_mv'] = code_daily['close']*code_daily['total_share']
+        code_daily['totals_mv'] = code_daily['close']*code_daily['total_share']#zqy：这个公式哪里来的
         code_daily['totals_mv'] = code_daily['totals_mv']/10000 #万元为单位
         code_daily['totals1'] = code_daily['total_share']*code_daily['pre_close']
 
         code_daily['trade_date'] = code_daily['trade_date'].apply(lambda x:datetime.datetime.strptime(str(x),"%Y%m%d"))
         code_daily['cq_sign'] = 0
-        #code_daily['ts_code'] = code_daily['ts_code'].apply(lambda x:int(x.replace('.SH','').replace('.SZ','')))
-        code_daily.dropna(how='any',inplace=True)
+        code_df['ts_code'] = code_daily['ts_code'].apply(lambda x:int(x.replace('.SH','').replace('.SZ','')))
+        code_df = code_df[['trade_date','ts_code','open','high','close','pre_close','vol','mean_price','amount','pct_chg','turnover_rate','hold_ratio',\
+                               'top10_d_r','industry','totals_mv','PeriodToMar','cq_sign']]
+        code_df.dropna(how='any',inplace=True)#存在NAN值时删除该行
+        stocks_daily_source = pd.concat([stocks_daily_source,code_df])
+        code_daily.dropna(how='any',inplace=True)#存在NAN值时删除该行
         
         #保存前12个交易日涨幅
         for i in range(1,13):
-            code_daily['cp'+str(i)] = code_daily['pct_chg'].shift(-1)
+            code_daily['cp'+str(i)] = code_daily['pct_chg'].shift(-i)
         #保存前5个交易日的成交量
         for j in range(1,6):
-            code_daily['vol'+str(j)] = code_daily['vol'].shift(-1)
+            code_daily['vol'+str(j)] = code_daily['vol'].shift(-j)
 
         #确定买入前五天涨幅
         code_daily['cp_sum_five'] = 0
@@ -171,9 +182,9 @@ def get_daily_data():
 
         #policy3:（买入前两天的收盘最高价-买入前两天开盘最低价）/买入前两天开盘最低价）
         code_daily['close_highest_2bef'] = code_daily[['close1','close2']].max(axis=1)
-        code_daily['open_lowest_2bef'] = code_daily[['close1','close2']].min(axis=1)
+        code_daily['open_lowest_2bef'] = code_daily[['open1','open2']].min(axis=1)
 
-        code_daily['policy3'] = code_daily['close_highest_2bef']-code_daily['open_lowest_2bef']/code_daily['open_lowest_2bef']
+        code_daily['policy3'] = (code_daily['close_highest_2bef']-code_daily['open_lowest_2bef'])/code_daily['open_lowest_2bef']*100
 
         #获取前30天的收盘最高价&收盘最低价
         code_daily['close_highest'] = 0
@@ -189,8 +200,8 @@ def get_daily_data():
                 code_daily.loc[i,'close_lowest'] = min(pre_22day['close'])
             except ValueError:
                 code_daily.loc[i,'close_lowest'] = np.nan
-        code_daily.to_csv(saved_path+'/'+str(code)+'.csv',index=False)
-        #policy1:收盘价与前30天包括选股当天的最高收盘价差值比例
+        code_daily.to_csv(daily_path+str(code)+'.csv',index=False)
+        #policy1:收盘价与前30天包括选股当天的最高收盘价差值比例--前22个交易日收盘最高价-当天收盘价/当天收盘价
         code_daily['policy1'] = (code_daily['close_highest'] - code_daily['close1'])/code_daily['close1']
 
         #policy2:选股当天成交量大于昨日成交量*1
@@ -207,20 +218,21 @@ def get_daily_data():
         #code_daily.drop(['Unnamed: 0'],axis=1,inplace=True)
 
         stocks_daily = pd.concat([stocks_daily,code_daily]) #股票数据拼接
-
+    stocks_daily['ts_code'] =stocks_daily['ts_code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
     #修改列名
     stocks_daily.rename(columns={'trade_date':'datetime','ts_code':'code','mean_price':'mean_value4_before','close1':'settlement',\
                           'hold_ratio':'top10sh'},inplace=True)
     stocks_daily.rename(columns={'close_highest':'30_close_highest','cp_sum_five':'cp_sum'},inplace=True)
-
+    #stocks_daily = pd.read_csv(saved_path + 'daily' + start_date_rel + '-' + end_date + '.csv')
     stocks_daily_final = stocks_daily[['datetime','code','totals1','policy3','open','high','policy1','policy2','tr_before',\
                      'settlement','30_close_highest','mean_value4_before','low','top10sh','after_sign','day_tomo',\
                      'day_aftertomo','cp_sum','cq_sign','close','h_l_diff']]
     #删除多余日期的股票
-    stocks_daily_final = stocks_daily_final[stocks_daily_final['datetime']>= pd.to_datetime(start_date_rel,format="%Y%m%d")]
+    stocks_daily_final = stocks_daily_final[pd.to_datetime(stocks_daily_final['datetime'],format="%Y/%m/%d")>= pd.to_datetime(start_date_rel,format="%Y/%m/%d")]
     print('写日线数据...')
-    stocks_daily.to_csv(saved_path+'daily'+start_date_rel+'-'+end_date+'.csv',index=False)
+    stocks_daily_source.to_csv(saved_path+'new_daily'+start_date_rel+'-'+end_date+'_source.csv',index=False)
+    stocks_daily_final.to_csv(saved_path+'new_daily'+start_date_rel+'-'+end_date+'.csv',index=False)
 
 if __name__ == '__main__':
-    get_daily_data()
+    #get_daily_data()
     get_minute_data()
