@@ -1,93 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Nov 19 16:32:22 2019
-
-改动：增加前22个交易日的涨幅信息作为筛选
-测！！最优！！参数组合
-
------------------------------
-在ver9上的基础改动之处：
-对不正常的均价进行了处理
-有三种选法
-1-用最高最低的平均值
-2-用开盘收盘的平均值
-3-用这四个值得平均值
-
-然后由于成交量 我们得数据都是原始数据 没有经过复权处理得
-所以现在 最简单的方式：除权的股票当天不进行选择范围
------------------------------
-在现今效果最好的版本上面改进--精简版
-
-
-这个主要就是分析数据--把固定属性都放松
-之前观察到换手率还是有影响的 所以保存换手率
-与最高价差也关系到买入价格设定 所以保存
-
-现在只考虑静态的
-但是增加一些筛选条件
-1.前五天的涨幅 不能太高 也不能太少  3-20
-2.单价 大于5小于50
-
-现在卖出策略变动更大
-变成 卖出价格跟买入价有关系而且跟卖出当天开盘价有关系
-OP>=BP: 开盘价>=买入价
-    LB = max{BP, OP+a*BP}
-    UB = min{BP+c*BP,OP+b*BP}
-OP<BP: 开盘价<买入价
-    LB = OP+a*BP
-    UB = max{BP,OP+b*BP}
-    
-分情况讨论：
-初始参数设定 之后还要调参
-总市值 >= 100时：
-a = -0.5%  b=4%
-总市值 < 100时：
-a = -0.4%  b=5%
-当买入价格<=30时：
-d_price = 1.05
-a = a*1.05 b=b*1.05
-
-买入策略变简单：
-不买的情况 --
-1.当天价格一直高于昨日收盘 的 1.01
-2.当天的价格一直低于 昨日收盘的 0.98
-
-买入的情况：
-3.当天开盘 处于 昨日收盘的 0.98 到  昨日收盘 的 1.01 之间
-4.当天开盘高于 昨日收盘 的 1.01 但是后来降低到 昨日收盘 的 1.01
-5.当天开盘低于 昨日收盘的 0.98 但后来涨到 昨日收盘的 0.98
-
-由于原来的买入策略更加好
-所以在原来策略上改进
-
-新引入减少回撤的策略
-#1.在股票数<10时 不进行股票购买操作
-#2.每支股票的最大购买金额为5万元
-#这些值都设为参数
-#
-#先不考虑金额  将股票数下限设为5
-#然后结合时间来考虑
-#如果当天的利润 <-0.01
-#则第二天不进行买入
-#以此类推
-（以上暂未考虑 只考虑了预警机制）
-
-加入动态变化的预警机制
-如果 当天股票个数<10且 利润<-0.01/-0.005（设为参数） 进入预警期
-但是如果遇到大于10的股票数的日期 则跳出预警期
-入股处在预警期的时间比较长，则最小股票数（10）变大
-
-预警期：就是股票数小于（最小股票数）10时 直接不进行购买
-
-引进高级预警机制：(随时可以进入 不管是不是在警戒状态)
-连续5天的利润之和 低于-10%（若没有买入 我们便当这天利润为-3%） 我们便进入高级预警状态
-只模拟买入 不真正的操作 到真正的盈利
-再转到预警模式
-
-
-@author: PC
-"""
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -109,38 +19,6 @@ price_up_list = [i for i in range(40,51)] #昨日收盘价格上限
 #totals1_up_list = [100,110,95,98,97,96,120]
 totals1_up_list = [1000,1100,950,980,970,960,1200] #总市值上限
 policy3_list = [i/10.0 for i in range(160,200)] #买入前两天到达的涨幅（（收盘最高close_highest-开盘最低价open_lowest）/开盘最低价open_lowest）
-
-#
-##卖出的条件的参数
-##100以上的
-#a_up100_list = [-i/1000 for i in range(1,6)]
-#b_up100_list = [j/100.0 for j in range(3,8)]
-##100以下的
-#a_down100 = -0.004
-#b_down100 = 0.05
-##固有标准
-#c_list = [i/1000.0 for i in range(70,86)]
-#
-##单价小于30时的变换参数
-#d_price = 1.05
-#
-##决定买入价格的参数
-#qu_num_list = [i/100.0 for i in range(95,100)]
-#mulh_num_list = [i/100.0 for i in range(95,100)]
-#settle_num_list = [i/100.0 for i in range(95,105)]
-#sell_minute_list = [615,600,630,645,660]
-
-#top10sh_list = [30,50,70]
-#tr_list = [3.7,2,4]
-#policy1_list = [0.04,0.06,0.02]
-#cp_down_list = [3,4,5]
-#policy2_list = [1.2,1.5,2]
-#cp_up_list = [20,22,19]
-#totals1_down_list = [104,100,110]
-#price_down_list = [7,5,3]
-#price_up_list = [40,45,50]
-#totals1_up_list = [1000,1100,1200]
-#policy3_list = [20,22,18]
 
 #卖出的条件的参数
 #100以上的
@@ -179,6 +57,26 @@ sell_miss_list = []
 code_miss_list = []
 bug_test = []
 print('初始化全局变量end')
+
+#print('内存有限，先测2019-06-01之前的')
+#0101-1001 2020
+start_date = '2020/02/01'
+start_date_path = '20200201'
+end_date = '2020/11/01'
+end_date_path = '20201101'
+fill_date = '2020-11-01'
+
+print('初始化分时数据和日线数据路径')
+#data_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stockdata/'+start_date_path+'_'+end_date_path+'/'
+
+data_path = 'F:/SmartLab/Quantitative-Investment/stockdata/20200201-20201101/'
+fenshi_path = data_path + 'fenshi_after_fq_0201_1101.csv'
+daily_path = data_path + 'daily20200101-20201206.csv'
+
+result_data_path = data_path + 'results/'
+
+
+
 
 #将str类型变为datetime类型
 def return_datetime(string):
@@ -564,7 +462,7 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
     print (str(b_end-b_start))
     return final_list
 
-def get_profit_update(data_path,sp,limit,dataset):
+def get_profit_update(data_path,limit,dataset):
     data = dataset[['code','buy','sell','st_or_dy','num']]
     #有些静态选入的股票 并没有买入 所以要去除这一部分
     data.buy = data.buy.astype(float)
@@ -606,7 +504,7 @@ def get_profit_update(data_path,sp,limit,dataset):
     #增加判断 结果不好则不产生图
     #if (pro[-1]>=limit) & (result_buy.shape[0]>(d_length//8)):
     if (pro[-1]>=limit):
-        data_file = data_path + sp
+        data_file = data_path
         mkdir(data_file)
         Data = result_buy[['profit','real_profit','buy_num','all_num','diff']]
         Data = Data.astype(float)
@@ -631,16 +529,22 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
     limit:股票收益的下界,低于这个值就不生成文件
     hl_limit:
     '''
-
+    #sp = 'ver4-_danger_signal_num_price_0_strick10_profit' + ('-'+str(a_up100)+'-'+str(a_up100)+'-'+str(policy1)+'-'+str(turnover)+'-'+str(min_stock_num))
     policy1,policy2,policy3,turnover,cp_up,cp_down,top10sh,totals1,totals1_up,price_up,price_down = p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7],p[8],p[9],p[10]
     a_up1001,a_up1002,b_up100,c,lb_p,para_c,ub_p,min_stock_num,sell_minute = p[11],p[12],p[13],p[14],p[15],p[16],p[17],p[18],p[19]
-
-    data_file = results_data_path
-    mkdir(data_file) #策略结果路径
-
-    f = open(results_data_path+"/change1.txt","w")  
-    out_log = open(results_data_path+"/outlog.txt","w")
-
+    sp = 'F:/Smart实验室/量化投资/version-limit0-'+start_date +end_date+'-' +str(policy1) +'-' + str(policy2)+'-' + str(policy3)+'-' + str(turnover)+'-' + str(cp_up)+'-' + str(cp_down)+'-' + str(top10sh)\
+    +'-' + str(totals1)+'-' + str(totals1_up)+'-' + str(price_up)+'-' + str(price_down)+'-' + str(a_up1001)+'-' + str(a_up1002)+'-' + str(b_up100)\
+    +'-' + str(c)+'-' + str(lb_p)+'-' + str(para_c)+'-' + str(ub_p)+'-' + str(min_stock_num)+'-' + str(sell_minute)+'-' + str(hl_limit)
+    
+    data_file = result_data_path
+    mkdir(data_file)
+    if not os.path.exists(result_data_path + "change1.txt"):
+        os.system(r"touch{}".format(result_data_path + "change1.txt")) #调用系统命令行来创建文件
+    if not os.path.exists(result_data_path + "outlog.txt"):
+        os.system(r"touch{}".format(result_data_path + "outlog.txt"))
+    
+    f = open(result_data_path + "change1.txt","w")
+    out_log = open(result_data_path+ "outlog.txt","w")
     start_day = 0
     
     #对于每一天的选股
@@ -654,7 +558,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
     j = start_day
     signal = 0#预警信号
     count = 0
-    init_min_stock_num = min_stock_num #10
+    init_min_stock_num = min_stock_num #5
     pro_sum = 0
     #pro_list 记录真实购买以及模拟买入操作的利润
     pro_list = []
@@ -1304,7 +1208,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
     data['num'] = 1     #默认每只一份钱，留了个空位以防万一之后每只股票买的数量不一样多
     #print(data.head())
 
-    result_real_pro,data_file = get_profit_update(data_path,sp,limit,data)
+    result_real_pro,data_file = get_profit_update(result_data_path,limit,data)
     l = result_real_pro.shape[0]
     #print (result_real_pro)
     
@@ -1401,71 +1305,7 @@ def get_profit_update_with_price_limit(data_file,dataset):
     plt.show()
     return result_buy
     
-print('初始化分时数据和日线数据路径')
-#2019/11/01-2020/04/30
-start_date = '20201106'
-end_date = '20201206'
-fill_date = '20201207'
 
-daily_path = '../../stockData/dataDownload/'+start_date+'_'+end_date+'/daily20201106-20201206.csv'
-fenshi_path = '../../stockData/dataDownload/'+start_date+'_'+end_date+'/Fenshi20201106-20201206.csv'
-
-results_data_path = '../../stockData/results'+start_date+'_'+end_date+'/'
-print('创建策略参数文件夹')
-mkdir(results_data_path)
-
-#获取日线的数据
-'''
-final_matrix格式
-        'datetime'-0, 'code'-1, 'totals1'-2, 'policy3'-3, 'open'-4, 'high'-5,
-       'mean_value4_before'-6, 'policy1', 'policy2', 'tr_before', 'settlement',
-       '30_close_highest',  'low', 'top10sh',
-       'after_sign', 'day_tomo', 'day_aftertomo', 'cp_sum', 'cq_sign','close'
-       含义
-       今日时间、股票编码、总市值、前两天涨幅、今日开盘价格、今日最高价格、
-       昨日四种价格平均所得的均价、收盘与30天最高收盘价差比例、成交量比例、昨日换手率、昨日收盘价格、
-       30天最高收盘价、昨日最高最低价格平均所得的均价、今日最低价格、十大股东占比、
-       之后一字涨停标志（如果一字涨停得下一个交易日卖出）、下一个交易日日期、下下个交易日日期、前五天涨幅之和、是否除权标志
-       昨日开盘收盘价格平均所得的均价、今日收盘价格
-(均价数据中暂时只使用了 'mean_value2_hl_before'。)
-'''
-
-print('开始读取日线数据')
-
-final_df = pd.read_csv(daily_path) #DataFrame
-
-final_df['day_tomo'].fillna(fill_date,inplace=True)
-final_df['day_aftertomo'].fillna(fill_date,inplace=True)
-#过滤掉688开头的股票
-final_df = final_df[(final_df['code']<688000) | (final_df['code'] >= 689000)]
-#final_df = final_df[final_df['datetime']>=start_date]
-final_df['code'] = final_df['code'].apply(lambda x:str(x).zfill(6))
-final_df['datetime'] = final_df['datetime'].apply(lambda x:return_datetime(x))
-final_df['day_tomo'] = final_df['day_tomo'].apply(lambda x:return_datetime(x))
-final_df['day_aftertomo'] = final_df['day_aftertomo'].apply(lambda x:return_datetime(x))
-final_df['totals1'] = final_df['totals1']/10000
-
-##老版本pandas的df.as_matrix()改写成新版本pandas的df.values
-final_df_copy = final_df  
-final_matrix = final_df.values
-print("type(final_matrix)",type(final_matrix))
-date_list = sorted(np.unique(final_matrix[:,0]))
-#date_list.append(pd.to_datetime('2019-07-05'))
-d_length = len(date_list)
-print ('股票日期:',date_list)
-
-
-print('读取分时数据')
-#获取分时数据
-fenshi_df = pd.read_csv(fenshi_path) #DataFrame
-#过滤掉688开头的股票
-fenshi_df = fenshi_df.loc[(fenshi_df['code']<688000 )| (fenshi_df['code'] >=689000) ]
-#fenshi_df = fenshi_df[fenshi_df['date'] >= start_date]
-fenshi_df['code'] = fenshi_df['code'].apply(lambda x:str(x).zfill(6))
-fenshi_df['datetime'] = fenshi_df['datetime'].apply(lambda x:to_datime(x))
-fenshi_df['date'] = fenshi_df['date'].apply(lambda x:return_datetime(x))
-#datetime 变为 timestamp形式
-fenshi_df = fenshi_df[['datetime','code','open','close','high','low','date','time']]
 
 '''
 Func:maxDrawDown -- return the max drawdown
@@ -1516,8 +1356,74 @@ def dist(para_list):
         para.append(a)
     return para
 
+#获取日线的数据
+'''
+final_matrix格式
+        'datetime'-0, 'code'-1, 'totals1'-2, 'policy3'-3, 'open'-4, 'high'-5,
+       'mean_value4_before'-6, 'policy1', 'policy2', 'tr_before', 'settlement',
+       '30_close_highest', 'mean_value2_hl_before'-12, 'low', 'top10sh',
+       'after_sign', 'day_tomo', 'day_aftertomo', 'cp_sum', 'cq_sign',
+       'mean_value_oc_before'-20,'close' h_l_diff
+       含义
+       今日时间、股票编码、总市值、前两天涨幅、今日开盘价格、今日最高价格、
+       昨日四种价格平均所得的均价、收盘与30天最高收盘价差比例、成交量比例、昨日换手率、昨日收盘价格、
+       30天最高收盘价、昨日最高最低价格平均所得的均价、今日最低价格、十大股东占比、
+       之后一字涨停标志（如果一字涨停得下一个交易日卖出）、下一个交易日日期、下下个交易日日期、前五天涨幅之和、是否除权标志
+       昨日开盘收盘价格平均所得的均价、今日收盘价格
+(均价数据中暂时只使用了 'mean_value2_hl_before'，所以另外两列均价数据可以随意一点。)
+'''
+
+final_df = pd.read_csv(daily_path) #DataFrame
+#print(final_df[final_df['datetime']>=start_date])
+final_df = final_df[final_df['datetime'] >= start_date]
+#print(final_df['datetime'] <= end_date)
+final_df = final_df[final_df['datetime'] <= end_date]
+
+final_df['day_tomo'].fillna(fill_date,inplace=True)
+final_df['day_aftertomo'].fillna(fill_date,inplace=True)
+#过滤掉688开头的股票
+final_df = final_df[(final_df['code']<688000) | (final_df['code'] >= 689000)]
+
+
+final_df['code'] = final_df['code'].apply(lambda x:str(x).zfill(6))
+
+final_df['datetime'] = final_df['datetime'].apply(lambda x:return_datetime(x))
+
+final_df['day_tomo'] = final_df['day_tomo'].apply(lambda x:return_datetime(x))
+final_df['day_aftertomo'] = final_df['day_aftertomo'].apply(lambda x:return_datetime(x))
+final_df['totals1'] = final_df['totals1']/10000
+
+##老版本pandas的df.as_matrix()改写成新版本pandas的df.values
+final_df_copy = final_df  
+final_matrix = final_df.values
+print("type(final_matrix)",type(final_matrix))
+
+date_list = sorted(np.unique(final_matrix[:,0]))
+d_length = len(date_list)
+
+print ('日线数据：',final_matrix)
+print('读取分时数据')
+#获取分时数据
+fenshi_df = pd.read_csv(fenshi_path) #DataFrame
+fenshi_df = fenshi_df[fenshi_df['date'] >= '2020-02-01']
+fenshi_df = fenshi_df[fenshi_df['date'] <= '2020-11-01']
+print("分时数据",fenshi_df['date'])
+
+#过滤掉688开头的股票
+fenshi_df = fenshi_df.loc[(fenshi_df['code']<688000 )| (fenshi_df['code'] >=689000) ]
+
+
+fenshi_df['code'] = fenshi_df['code'].apply(lambda x:str(x).zfill(6))
+fenshi_df['datetime'] = fenshi_df['datetime'].apply(lambda x:to_datime(x))
+fenshi_df['date'] = fenshi_df['date'].apply(lambda x:return_datetime(x))
+
+fenshi_df = fenshi_df[['datetime','code','open','close','high','low','date','time']]
+print("分时数据",fenshi_df)
+
 if __name__ == '__main__':
     print('进入main函数:')
+    print('创建策略参数文件夹')
+    mkdir(result_data_path)
     final_show_df = pd.DataFrame()
     #如果收益最后没达到这个值 不保存过程中间的文件
     limit = 70 #本来是70 万
@@ -1529,7 +1435,6 @@ if __name__ == '__main__':
     pro_list = []
     para_change_list = []
     count = 0
-    
     para_col = [policy1_list,policy2_list,policy3_list,tr_list,cp_up_list,cp_down_list,top10sh_list,totals1_down_list,totals1_up_list,\
                    price_up_list,price_down_list,a_up1001_list,a_up1002_list,b_up100_list,c_list,\
                    qu_num_list,mulh_num_list,settle_num_list,min_stock_num_list,sell_minute_list]
@@ -1537,7 +1442,7 @@ if __name__ == '__main__':
     tabu_list = pd.Series([0 for i in range(len(para_col))])
     
     #ver1901-1907-0.03-1.0-10-2-8-4-50-30-300-40-4--0.001--0.001-0.07-0.082-0.96-0.96-1-9-600
-    para_good = [0.03,1,10,2,8,4,50,30,300,40,4,-0.001,-0.001,0.07, 0.082,0.96,0.96,1,10,600]
+    para_good = [0.03,1,10,2,8,4,50,30,300,40,4,-0.001,-0.001,0.07, 0.082,0.96,0.96,1,5,600]
     print('根据参数信息选取股票...')
     #测试特定参数（现在用的参数）的结果
     result = make_stock_result_with_advanced_num(para_good,0,0.18)
