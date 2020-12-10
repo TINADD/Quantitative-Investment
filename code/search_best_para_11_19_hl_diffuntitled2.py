@@ -36,7 +36,7 @@ OP>=BP: 开盘价>=买入价
 OP<BP: 开盘价<买入价
     LB = OP+a*BP
     UB = max{BP,OP+b*BP}
-    
+
 分情况讨论：
 初始参数设定 之后还要调参
 总市值 >= 100时：
@@ -189,7 +189,7 @@ def return_datetime(string):
         return datetime.datetime.strptime(string, "%Y-%m-%d")
     except ValueError:
         return datetime.datetime.strptime(string, "%Y/%m/%d")
-    
+
 def return_datetime_final(string):
     try:
         return datetime.datetime.strptime(string, "%Y-%m-%d %H:%M:%S")
@@ -205,29 +205,29 @@ def to_datime(ex_string):
             return (datetime.datetime.strptime(ex_string, "%Y/%m/%d %H:%M"))
         except ValueError:
             date_format_err.append(ex_string)
-            return np.nan    
-        
-        
+            return np.nan
+
+
 def MarketToTime(st):
     try:
         return datetime.datetime.strptime(str(st), "%Y%m%d")
     except ValueError:
         return np.nan
-    
+
 
 
 def mkdir(path):
- 
+
 	folder = os.path.exists(path)
- 
+
 	if not folder:                   #判断是否存在文件夹如果不存在则创建为文件夹
 		os.makedirs(path)            #makedirs 创建文件时如果路径不存在会创建这个路径
 		print ("---  new folder...  ---")
 		print ("---  OK  ---")
- 
+
 	else:
 		print ("---  There is this folder!  ---")
-        
+
 def get_not(tmp_list):
     return_list = []
     for i in tmp_list:
@@ -255,7 +255,7 @@ def min_max1(series):
 
 #buy_matrix ----'code','buy','after_sign','day_tomo','day_aftertomo','totals1'  注意后两者的日期格式！！
 #after_sign?
-# 决定卖出策略的上下界 
+# 决定卖出策略的上下界
 def decision_sp_ub(totals,bp,op,cp,a_up1001,a_up1002,b_up100,c):
     '''
     totals:总市值
@@ -280,7 +280,7 @@ def decision_sp_ub(totals,bp,op,cp,a_up1001,a_up1002,b_up100,c):
         elif op<= bp*0.98: #开盘价<=买入价*0.98
             lb = op+a_up1001*bp
             ub = max(bp,(op+b_up100*bp))
-        else: 
+        else:
             lb = op+a_up1002*bp
             ub = max(bp,(op+b_up100*bp))
     return lb,ub
@@ -300,8 +300,8 @@ def decision_sp_ub(totals,bp,op,cp,a_up1001,a_up1002,b_up100,c):
 #            lb = op+a_up100*bp
 #            ub = max(bp,(op+b_up100*bp))
 #    return lb,ub
-        
-            
+
+
 '''
 Func:sell_result_update_ver2 -- to determine the sell price
 Input:buy_matrix,day,day_after,m,a_up100,b_up100,sell_minutes
@@ -319,7 +319,7 @@ def sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100
     #print ('after  choose day:')
     #print (fenshi.shape)
     result_list = np.full([m,9],np.nan)
-        
+
     for i in range(m):
         codeid  = str(int(buy_matrix[i,0])).zfill(6)
         buy = buy_matrix[i,1]
@@ -359,7 +359,7 @@ def sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100
                     print (fenshi1)
                     time.sleep(3)
                     continue
-                    
+
                 date_slice1 = date_slice + datetime.timedelta(minutes=sell_minutes)
                 fenshi_tmp = sell_tmp[sell_tmp['datetime']>date_slice]
                 fenshi_tmp = fenshi_tmp[fenshi_tmp['datetime']<=date_slice1]
@@ -370,7 +370,7 @@ def sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100
                 except IndexError:
                     sell_miss_list.append([date_slice,codeid])
                     continue
-           
+
         #sign表示卖出当天开盘涨停 所以再后面一天卖出
         else:
             try:
@@ -385,7 +385,7 @@ def sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100
                 print (fenshi_olu)
                 time.sleep(3)
                 continue
-                
+
             date_slice1 = date_slice + datetime.timedelta(minutes=sell_minutes)
             fenshi_tmp = sell_tmp[sell_tmp['datetime']>date_slice]
             fenshi_tmp = fenshi_tmp[fenshi_tmp['datetime']<=date_slice1]
@@ -396,15 +396,15 @@ def sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100
             except IndexError:
                 sell_miss_list.append([date_slice,codeid])
                 continue
-            
-            
+
+
         lb,ub = decision_sp_ub(totals,buy,open_p,close,a_up1001,a_up1002,b_up100,c)
         max_p = max(fenshi_matrix[:,4])
         min_p = min(fenshi_matrix[:,5])
         f_p = fenshi_matrix[0,3]
-        
 
-        
+
+
         tmp_list = []
         #改这一块
         m = fenshi_matrix.shape[0]
@@ -424,7 +424,7 @@ def sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100
         else:
             #对于每分钟 先判断是否达到了 上界
             #需要先判断开盘是否低于下界或者高于上界
-            for j in range(1,m+1): 
+            for j in range(1,m+1):
                 if (fenshi_matrix[-1*j,2]) >= ub:
                     tmp_list = [codeid, ub, 2, lb, ub, max_p, min_p, f_p, open_p]
                     break
@@ -437,7 +437,7 @@ def sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100
                 elif (fenshi_matrix[-1*j,4]) >= ub:
                     tmp_list = [codeid, ub, 2, lb, ub, max_p, min_p, f_p, open_p]
                     break
-                        
+
         #print (tmp_list)
         try:
             result_list[i] = tmp_list
@@ -445,31 +445,31 @@ def sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100
             t_list = [codeid, ub, 2, lb, ub, max_p, min_p, f_p, open_p]
             bug_test.append(t_list)
             continue
-        
+
     df_sell = pd.DataFrame(result_list,columns=['code','sell','SellPolicy','sell_lb','sell_ub','max_p','min_p','f_p','open_p'])
     return df_sell
 
 
 #最新的买入策略  去掉 创新高的情况  以及改进策略4/5时的情况 均价-stock[12]  30天最高-stock[11] 昨日收盘-stock[10]
-# 如果买入股票当天高开或者平开 则以1%为界限 
+# 如果买入股票当天高开或者平开 则以1%为界限
 # 如果买入股票当天 低开 则尝试以 -1%/-2%/0.97H (现在还是0.97H)来区分情况
 # 在这个界限之下 则 必须达到 max{昨日收盘，昨日均价再买入}
 # 在这个界限之上 则 达到 min{昨日收盘，昨日均价再买入} 或者开盘低于此最小值直接买入
-    
+
 '''
 function:bp_decision_ver3  ---  To decide the buy price and policy.
-Input: choose_matrix -- Chosen Stocks Matrix   
+Input: choose_matrix -- Chosen Stocks Matrix
 Format:'datetime','code','totals1','policy3','open','high','mean_value4_before','policy1','policy2','tr_before',\
                      'settlement','30_close_highest','mean_value2_hl_before','low','top10sh','after_sign','day_tomo',\
                      'day_aftertomo','cp_sum','cq_sign','mean_value_oc_before'
-                     
+
 ['datetime','code','totals1','policy3','open','high','mean_value4_before','policy1','policy2','tr_before',\
                      'settlement','30_close_highest','mean_value2_hl_before','low','top10sh','after_sign','day_tomo',\
                      'day_aftertomo','cp_sum','cq_sign','mean_value_oc_before','close']
 
-    lb_p 
-Output: buy_final_list 
-Format: buy_price buy_policy policy4_std(stock[11]*0.97) policy_4_value(min(stock[12],stock[10])) 
+    lb_p
+Output: buy_final_list
+Format: buy_price buy_policy policy4_std(stock[11]*0.97) policy_4_value(min(stock[12],stock[10]))
                 policy_5_value(max(stock[12],stock[10],stock[11]*0.99))
 '''
 def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
@@ -498,10 +498,10 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
         except TypeError:
             print (stock[11])
             time.sleep(60)
-        #stock[12]:昨日均价；stock[10]:昨日收盘价    
+        #stock[12]:昨日均价；stock[10]:昨日收盘价
         policy_4_value = min(stock[12],stock[10])
         policy_5_value = max(stock[12],stock[10],stock[11]*para_c)
-        
+
         buy_list[2] = policy4_std
         buy_list[3] = policy_4_value
         buy_list[4] = policy_5_value
@@ -511,7 +511,7 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
         buy_list[6] = stock[13]
         #最高 high stock[5]
         buy_list[7] = stock[5]
-        #高开 
+        #高开
         #开盘价高于昨日收盘
         if stock[4]>stock[10]:
             #开盘小于收盘价*ub_p 直接开盘买入 策略1
@@ -525,32 +525,32 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
                     buy_list[1] = 1
                 else:
                     buy_list[1] = 6 #?
-                
-        #平开 的情况      直接开盘价买入  
+
+        #平开 的情况      直接开盘价买入
         elif stock[4]==stock[10]: #今日开盘等于昨日收盘价
             buy_list[0] = stock[4]
             buy_list[1] = 3
-        
+
         #低开的情况 今日开盘小于昨日收盘
         else:
-            #若开盘 >前30天 包括当天的最高收盘价（30_close_highest）*lb_p 
+            #若开盘 >前30天 包括当天的最高收盘价（30_close_highest）*lb_p
             #等市价达到 min{昨日收盘，昨日均价}再买入或者开盘低于此最小值直接买入
             if(stock[4]>=policy4_std): #policy4_std = stock[11]*lb_p
                 #开盘小于min{昨日收盘，昨日均价} 直接买入
                 if(stock[4]/policy_4_value<=1): #policy_4_value = min(stock[12],stock[10])
                     buy_list[0] = stock[4]
                     buy_list[1] = 4
-                    
+
                 #开盘不小于 min{昨日收盘，昨日均价} 但是最低达到过 min{昨日收盘，昨日均价} 以min{昨日收盘，昨日均价}买入
                 elif(stock[13]/policy_4_value<=1):
                     buy_list[0] = policy_4_value
                     buy_list[1] = 4
-                    
+
                 #开盘不小于min{昨日收盘，昨日均价}，最低价也未达到min{昨日收盘，昨日均价}
                 else:
                     #如果都达不到 则不买入 策略8
                     buy_list[1] = 8
-            #若开盘 < 前30天包括当天的最高收盘价（30_close_highest）*lb_p 
+            #若开盘 < 前30天包括当天的最高收盘价（30_close_highest）*lb_p
             # 等市价达到max{昨日收盘，昨日均价}买入 此时开盘都小于昨日收盘了 肯定小于max{昨日收盘，昨日均价}
             #所以只需要看 能不能达到 max{昨日收盘，昨日均价} 能就买 不能就不买入
             else: #最高价high >=  max(昨日均价,昨日收盘,stock[11]*para_c)
@@ -578,10 +578,10 @@ def get_profit_update(data_path,sp,limit,dataset):
     cost = 0.002
     #这里收益指的是收益率，由于相当于用同样的钱去买每只股，故收益率可以简单平均
     data1['profit'] = (data1['sell'] - data1['buy'])/data1['buy'] - cost
-    
+
     result_all = data.groupby(data.index).sum()
 
-    
+
     result_buy_count = data1.groupby(data1.index).sum()
     result_buy = data1.groupby(data1.index).mean()
     result_buy['NotBuyNum']  = result_all['num'] - result_buy_count['num']
@@ -589,7 +589,7 @@ def get_profit_update(data_path,sp,limit,dataset):
     result_buy['all_num'] = result_all['num']
     result_buy['not_buy_rate'] = result_buy['NotBuyNum']/result_buy['all_num']
     result_buy['buy_rate'] = result_buy['buy_num']/result_buy['all_num']
-    
+
     days = result_buy.shape[0]
     pro = np.zeros(days)
     diff = np.zeros(days)
@@ -603,8 +603,8 @@ def get_profit_update(data_path,sp,limit,dataset):
 
     result_buy['real_profit'] = pro
     result_buy['diff'] = diff
-    
-    
+
+
     #去掉大盘信息
     #增加判断 结果不好则不产生图
     #if (pro[-1]>=limit) & (result_buy.shape[0]>(d_length//8)):
@@ -618,13 +618,13 @@ def get_profit_update(data_path,sp,limit,dataset):
         #Data['close'] = (Data['close']-3000)/10
         Data.plot(figsize=(16,12))
         plt.grid(True)
-        
+
         plt.savefig(data_file + '/' + 'profit_num_add_index' + '.png')
         #plt.show()
     else:
         data_file = None
         pass
-    
+
     return result_buy,data_file
 
 #最新的那个策略 （高级预警机制带有延长期）
@@ -640,18 +640,18 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
     sp = 'F:/Smart实验室/量化投资/version-limit0-'+start_date +end_date+'-' +str(policy1) +'-' + str(policy2)+'-' + str(policy3)+'-' + str(turnover)+'-' + str(cp_up)+'-' + str(cp_down)+'-' + str(top10sh)\
     +'-' + str(totals1)+'-' + str(totals1_up)+'-' + str(price_up)+'-' + str(price_down)+'-' + str(a_up1001)+'-' + str(a_up1002)+'-' + str(b_up100)\
     +'-' + str(c)+'-' + str(lb_p)+'-' + str(para_c)+'-' + str(ub_p)+'-' + str(min_stock_num)+'-' + str(sell_minute)+'-' + str(hl_limit)
-    
+
     sp = "20200201-20201101/"
-    data_file = data_path + sp
+    data_file = data_path 
     mkdir(data_file)
-    f = open("F:/SmartLab/Quantitative-Investment/code/change1.txt","w")
-    
-    out_log = open("F:/SmartLab/Quantitative-Investment/code/outlog.txt","w")
-    out_002741 = open("F:/SmartLab/Quantitative-Investment/code/outlog.txt","w")
-    out_601700 = open("F:/SmartLab/Quantitative-Investment/code/outlog.txt","w")
+    f = open("../Log/change1.txt","w")
+
+    out_log = open("../Log/outlog.txt","w")
+    out_002741 = open("../Log/outlog.txt","w")
+    out_601700 = open("../Log/outlog.txt","w")
 
     start_day = 0
-    
+
     #对于每一天的选股
     special_df = pd.DataFrame(columns=['code','day_aftertomo'])
     t1 = time.perf_counter()
@@ -684,7 +684,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         #买入前一天---选股当天
         day_before = date_list[j-1]
         if j==0:
-            day_before = day 
+            day_before = day
 #        #加入大盘信息判断
 #        judge = list(index_df[index_df['trade_date']==day]['indexUse1'])[0]
 #        if not judge:
@@ -732,7 +732,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1]):
             out_log.write('日线数据里没有603626这只股票\n')
             flag_603626  = False
-        
+
         #选取股票总市值小于totals1_up 300
         choose_matrix = tmp_matrix[tmp_matrix[:,2] < totals1_up]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
@@ -750,7 +750,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626总市值>= '+str(totals1_up)+'\n')
             flag_603626  = False
-        
+
         #选取股票总市值大于totals1 30
         choose_matrix = choose_matrix[choose_matrix[:,2] > totals1]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
@@ -785,7 +785,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603262 policy3 >= '+str(policy3)+'\n')
             flag_603626  = False
-        #新增不选取除权的股票 
+        #新增不选取除权的股票
         choose_matrix = choose_matrix[choose_matrix[:,19] != 1]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
             out_log.write('股票002512 已除权\n')
@@ -819,7 +819,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 cp_up >= '+str(cp_up)+'\n')
             flag_603626  = False
-        
+
         choose_matrix = choose_matrix[choose_matrix[:,18] > cp_down]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
             out_log.write('股票002512 cp_down <= '+str(cp_down)+'\n')
@@ -836,9 +836,9 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 cp_down <= '+str(cp_down)+'\n')
             flag_603626  = False
-        
+
         #静态选股规则
-        choose_matrix1 = choose_matrix[choose_matrix[:,7] < policy1*(1+para2)] 
+        choose_matrix1 = choose_matrix[choose_matrix[:,7] < policy1*(1+para2)]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 policy1 >= '+str(policy1*(1+para2))+'\n')
             flag_2512  = False
@@ -854,7 +854,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 policy1 >= '+str(policy1*(1+para2))+'\n')
             flag_603626  = False
-        
+
         choose_matrix1 = choose_matrix1[choose_matrix1[:,8] > policy2]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 policy2 <= '+str(policy2)+'\n')
@@ -871,7 +871,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 policy2 <= '+str(policy2)+'\n')
             flag_603626  = False
-        
+
         choose_matrix1 = choose_matrix1[choose_matrix1[:,9] > turnover*(1-para2)]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 换手率 <= '+str(turnover*(1-para2))+'\n')
@@ -888,7 +888,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 换手率 <= '+str(turnover*(1-para2))+'\n')
             flag_603626  = False
-        
+
         choose_matrix1 = choose_matrix1[choose_matrix1[:,14] > top10sh*(1-para1)]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
@@ -905,7 +905,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
             flag_603626  = False
-        
+
         #增加价格筛选 即对于股票昨日收盘价格进行筛选
         choose_matrix1 = choose_matrix1[choose_matrix1[:,10] <= price_up]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
@@ -923,7 +923,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         if( '603626' not in  tmp_matrix[:,1] and flag_603626):
             out_log.write('股票603626 price_up >'+str(price_up)+'\n')
             flag_603626  = False
-        
+
         choose_matrix1 = choose_matrix1[choose_matrix1[:,10] >= price_down]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 price_down <'+str(price_down)+'\n')
@@ -944,12 +944,12 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         #对于前22个交易日涨幅筛选
         #print('股票前22个交易日涨幅要<=',hl_limit,'先不用这个策略')
         #choose_matrix1 = choose_matrix1[choose_matrix1[:,22] <= hl_limit]
-        
+
         t2 = time.perf_counter()
-        
+
         '''决定买入,并且将买入的格式改成之后需要的格式
-        datetime code  buy buyPolicy  policy4_std policy4_value policy5_value  
-        buy_open buy_low buy_high st_or_dy after_sign day_tomo day_aftertomo  
+        datetime code  buy buyPolicy  policy4_std policy4_value policy5_value
+        buy_open buy_low buy_high st_or_dy after_sign day_tomo day_aftertomo
         totals1 settlement open mean_price_before 30_close_highest close
         '''
         print('决定买入，将买入的格式改成之后需要的格式')
@@ -985,7 +985,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         print('st_buy_matrix.columns',st_buy_matrix.shape[1])
         st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[4,12,11,21]]))
         print('st_buy_matrix.columns',st_buy_matrix.shape[1])
-        
+
         '''之后如果要加上动态选股的，则把前面的加上 把下面这句话去掉。'''
         buy_matrix = st_buy_matrix
 
@@ -1004,7 +1004,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
 #            print ('buy_matrix.shape:%d' % buy_matrix.shape[0])
 #        except:
 #            pass
-        
+
         '''
         同一个日期是同时进行股票的选股，买入和卖出的
         比如1月2号既要选股又要买入又要卖出
@@ -1036,10 +1036,10 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
             continue
         #print (df_buy.info())
         df_buy['buy'] = df_buy['buy'].astype(float)
-        
+
         '''
-        对选股的买入价格进行筛选 
-        并且转化为卖出需要的格式 
+        对选股的买入价格进行筛选
+        并且转化为卖出需要的格式
         'code','buy','after_sign','day_tomo','day_aftertomo','totals1','settlement'
         并且增加 有买入后一字涨停的股票的 code和day_aftertomo信息 到special_df
         如果通过买入价格筛选之后没有股票了，便将今天的利润记为0， continue
@@ -1065,18 +1065,18 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
             pro_list.append(0)
             continue
         buy_matrix = df_buy1.values
-             
+
         '''
-        卖出股票 记录卖出股票所耗时间 
+        卖出股票 记录卖出股票所耗时间
         另外 可能分钟数据缺失 导致卖出数据缺失 --直接去掉
         如果由于数据缺失导致df_sell没有值，pro=0 continue
-        df_day  格式：'datetime','code','buy','buyPolicy','policy4_std', 'policy4_value', 'policy5_value', 
+        df_day  格式：'datetime','code','buy','buyPolicy','policy4_std', 'policy4_value', 'policy5_value',
         'buy_open', 'buy_low', 'buy_high', 'st_or_dy','totals1',
         'settlement', 'open', 'mean_value2_hl_before', '30_close_highest','close','sell','SellPolicy','sell_lb',
         'sell_ub','max_p','min_p','f_p','open_p'
         '''
-        start1 = time.perf_counter()     
-        df_sell = sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100,sell_minute,c)  
+        start1 = time.perf_counter()
+        df_sell = sell_result_update_ver2(buy_matrix,day,day_after,m,a_up1001,a_up1002,b_up100,sell_minute,c)
         print(df_sell.shape)
         df_sell.dropna(how='all',inplace=True)
         end1 = time.perf_counter()
@@ -1096,7 +1096,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
             print (df_buy.info())
             print (df_buy.head())
             print (df_buy[np.isnan(df_buy['code'])])
-            
+
         try:
             df_day = pd.merge(df_buy, df_sell, on=['code'], how='left')
         except ValueError:
@@ -1111,7 +1111,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
             pro_list.append(0)
             sell_error.append(day)
             continue
-            
+
         #属性中的datetime是指 买入股票的日期
         df_day['buy'] = df_day['buy'].apply(lambda x:float('%.2f' % x))
         df_day['sell'] = df_day['sell'].apply(lambda x:float('%.2f' % x))
@@ -1124,8 +1124,8 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         j += 1
         buy_num = df_day1.shape[0]
         all_num = df_day.shape[0]
-        
-        '''预警机制   
+
+        '''预警机制
         预警机制（增加动态增长情况和禁忌操作）：
         min_stock_num初始化为10
         遇到当天卖出股票收益（每支股的收益-成本0.002的平均值）<0且选出股票数<=10则进入警戒状态, 但是如果遇到选出的股票数大于min_stock_num时，
@@ -1142,7 +1142,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         不进行真实购买（这是仍要判断是否符合基本的预警机制）。
         即我们的高级预警机制是以基本预警机制为基础的，同时即使处在高级预警状态或者其延长期，我们仍要判断是否符合基本预警。
         '''
-        
+
         '''
         存在高级预警
         '''
@@ -1159,8 +1159,8 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         else:
             pro_sum = pro_list[-1]+pro_list[-2]
             pro_yester = pro_list[-1]
-        
-            
+
+
         #使用收盘的价值来计算
         #本来没有预警  要先判断是否会出现高级预警
         if (signal==0):
@@ -1170,7 +1170,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
                 pass
             if (advanced_signal==1):#模拟 不真正买入
                 #在高级预警状态 仍然得判断 是不是会引发普通预警
-                
+
                 if (df_day.shape[0]<=min_stock_num)&(pro_yester<0):#会出现普通预警
                     signal = 1
                     count +=1
@@ -1185,7 +1185,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
 #                         f.write('20190605 df_day.shape:')
 #                         f.write(df_day.shape[0])
 #                         f.write('\n')
-                    
+
                 else:#不会出现预警
                     signal = 0
                     count = 0
@@ -1207,9 +1207,9 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
 
                     else:
                         pass
-                
 
-                    
+
+
             else:#没有进入高级预警状态
                 if ((high_count < 3)&(df_day.shape[0]<=8)):#处于高级预警的影响范围 如果选股数量<8则模拟买入 不真实操作
                      if np.isnan(np.mean(df_day['pro_bc'])):
@@ -1240,7 +1240,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
                     final_lose_df = pd.concat([final_lose_df,df_day_lose])
                     signal = 0
                     count = 0
-                    
+
                     if np.isnan(np.mean(df_day['profit'])):
                         print ('Actually choose and buy /sell but there is nan data in profit.')
                         print (df_day['profit'])
@@ -1250,7 +1250,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
                     else:
                         pro_test.append([day,np.mean(df_day['pro_bc']),advanced_signal,signal,pro_sum,high_count,count,min_stock_num,buy_num,all_num,pro_yester])
                         pro_list.append(np.mean(df_day['pro_bc']))
-                        
+
                     if (df_day.shape[0]<=min_stock_num)&(pro_yester<0):#第二天会出现预警
                         signal = 1
                         count += 1
@@ -1260,8 +1260,8 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
                     else:#不出现预警
                         signal = 0
                         count = 0
-                        
-        else:#本来处于预警期 
+
+        else:#本来处于预警期
             if (df_day.shape[0]>min_stock_num):#出现大于5的 预警消除 前一天便可以判断 相当于早上判断这个 可是一天过完之后还是得判断会不会进入预警期
                 signal = 0
                 if advanced_signal == 0:
@@ -1292,16 +1292,16 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
                         continue
                     else:
                         pro_test.append([day,np.mean(df_day['pro_bc']),advanced_signal,signal,pro_sum,high_count,count,min_stock_num,buy_num,all_num,pro_yester])
-                        
+
             else:
                 count += 1
                 pro_test.append([day,np.mean(df_day['pro_bc']),advanced_signal,signal,pro_sum,high_count,count,min_stock_num,buy_num,all_num,pro_yester])
-            
+
         if (count == 6):
             min_stock_num += 5
         else:
             pass
-                
+
     '''先判断利润是否足够大 如果足够大 再进行存储'''
     try:
         data = final_choose_df[['code','datetime','buy','sell','st_or_dy']]
@@ -1316,7 +1316,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
     result_real_pro,data_file = get_profit_update(data_path,sp,limit,data)
     l = result_real_pro.shape[0]
     #print (result_real_pro)
-    
+
     #d_length为date_list的长度
     print ('Final result : %f' % result_real_pro.iloc[l-1].loc['real_profit'])
     #if (result_real_pro.loc[l-1,'real_profit'] >= limit) & (l>(d_length//8)):
@@ -1326,14 +1326,14 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         pro_df.to_csv(data_file + '/' + 'pro_test.csv',index=False)
         pro_df1 = pd.DataFrame(pro_test,columns=['date','pro','advanced_level','signal','pro_sum','high_count','count','min_stock_num','buy_num','all_num','pro_yester'])
         pro_df1.to_csv(data_file + '/' + 'pro_test_date.csv',index=False)
-        
+
         special_df.to_csv(data_file + '/special.csv')
-    
+
         result_real_pro.to_csv(data_file + '/real_pro.csv',index=True)
-        
+
         result_real_pro.rename(columns={'real_profit':('rp' +'-' + sp)},inplace=True)
         show = result_real_pro['rp' +'-' + sp]
-        
+
         return show
     else:
         return pd.Series()
@@ -1352,9 +1352,9 @@ def get_profit_update_with_price_limit(data_file,dataset):
     cost = 0.002
     #这里收益指的是收益率，由于相当于用同样的钱去买每只股，故收益率可以简单平均
     data1['profit'] = (data1['sell'] - data1['buy'])/data1['buy'] - cost
-    
+
     result_all = data.groupby(data.index).sum()
-    
+
     result_buy_count = data1.groupby(data1.index).sum()
     result_buy = data1.groupby(data1.index).mean()
     result_buy['NotBuyNum']  = result_all['num'] - result_buy_count['num']
@@ -1362,24 +1362,24 @@ def get_profit_update_with_price_limit(data_file,dataset):
     result_buy['all_num'] = result_all['num']
     result_buy['not_buy_rate'] = result_buy['NotBuyNum']/result_buy['all_num']
     result_buy['buy_rate'] = result_buy['buy_num']/result_buy['all_num']
-    
+
     days = result_buy.shape[0]
     pro = np.zeros(days)
     diff = np.zeros(days)
     pro[0] = 100 + result_buy.iloc[0].loc['buy_num']*max_stock_pay*(result_buy.iloc[0].loc['profit'])
     diff[0] = 0
     for i in range(1,days):
-        
+
         #有价格限制
         if (pro[i-1]/result_buy.iloc[i].loc['all_num']>max_stock_pay):
             pro[i] = pro[i-1] + result_buy.iloc[i].loc['buy_num']*max_stock_pay*(result_buy.iloc[i].loc['profit'])
         else:
             pro[i] = pro[i-1]*result_buy.iloc[i].loc['not_buy_rate'] + pro[i-1]*result_buy.iloc[i].loc['buy_rate']*(result_buy.iloc[i].loc['profit']+1)
         diff[i] = np.abs(pro[i]-pro[i-1])
-    
+
     result_buy['real_profit'] = pro
     result_buy['diff'] = diff
-    
+
     #增加大盘的信息
     hs_df = pd.read_csv('E:/pyWorkspace/QI'+'/data/StockInfo/hs300_price.csv')
     hs_df['trade_date'] = hs_df['trade_date'].apply(lambda x:datetime.datetime.strptime(str(x), "%Y%m%d"))
@@ -1389,7 +1389,7 @@ def get_profit_update_with_price_limit(data_file,dataset):
     result_buy['date'] = result_buy['date'].apply(lambda x:return_datetime_final(str(x)))
     result_buy = pd.merge(result_buy,hs_df1,on=['date'],how='left')
     result_buy.set_index(['date'],inplace=True)
-    
+
     Data = result_buy[['profit','real_profit','buy_num','all_num','diff','close']]
     Data = Data.astype(float)
     Data['profit'] = Data['profit']*1000
@@ -1397,10 +1397,10 @@ def get_profit_update_with_price_limit(data_file,dataset):
     Data['close'] = (Data['close']-3000)/10
     Data.plot(figsize=(16,12))
     plt.grid(True)
-    
+
     plt.savefig(data_file + '/' + 'profit_num_with_price_limit_add_index' + '.png',dpi = 400,bbox_inches='tight')
     plt.show()
-    
+
     Num = result_buy[['buy_num','all_num']]
     #Num['st_num'] = result['num'] - result['st_or_dy']
     Num = Num.astype(float)
@@ -1409,15 +1409,18 @@ def get_profit_update_with_price_limit(data_file,dataset):
     plt.savefig(data_file + '/' + 'num_with_price_limit_add_index' + '.png',dpi = 400,bbox_inches='tight')
     plt.show()
     return result_buy
-    
+
 print('初始化分时数据和日线数据路径')
 #fenshi_path = 'E:/Stock/最新代码/Agu/Agu/ParaFindData/ParaFindData/fenshi_stocks.csv'
 #daily_path = 'E:/Stock/最新代码/Agu/Agu/ParaFindData/ParaFindData/daily_stocks.csv'
 #2019/11/01-2020/04/30
-fenshi_path = 'F:/SmartLab/stockData/20200101_20201101/fenshi/fenshi_after_fq_0101_1101.csv'
-daily_path = 'F:/SmartLab/stockData/20200101_20201101/daily_stocks.csv'
+fenshi_path = '../stockData/2010-2011/fenshi_after_fq.csv'
+#fenshi_path = '../stockData/2001-2010/fenshi_after_fq_0201_1101.csv'
+#daily_path = '../stockData/daily_stocks_new.csv'
+daily_path = '../stockData/2010-2011/daily_stocks_new.csv'
 #data_path = root_file + '/data/1718-Result-Arrage/Test/'
-data_path = 'F:/SmartLab/stockData/20200101_20201101/results-0201-1101/'
+data_path = '../stockData/2010-2011/results-1115-1125/'
+#data_path = '../stockData/2001-2010/results-0201-1101/'
 print('创建策略参数文件夹')
 mkdir(data_path)
 
@@ -1466,7 +1469,7 @@ final_df['policy3'] = final_df['policy3']*100
 final_df['totals1'] = final_df['totals1']/10000
 #final_df.to_csv(root_file + '/data/Year180726To170526/final_features_use.csv', index=False)
 ##老版本pandas的df.as_matrix()改写成新版本pandas的df.values
-final_df_copy = final_df  
+final_df_copy = final_df
 final_matrix = final_df.values
 print("type(final_matrix)",type(final_matrix))
 #print("日线数据top10-14,",final_matrix[:,14])
@@ -1557,17 +1560,17 @@ if __name__ == '__main__':
     start = time.perf_counter()
     best_pro = 0
     best_para = []
-    
+
     pro_list = []
     para_change_list = []
     count = 0
-    
+
     para_col = [policy1_list,policy2_list,policy3_list,tr_list,cp_up_list,cp_down_list,top10sh_list,totals1_down_list,totals1_up_list,\
                    price_up_list,price_down_list,a_up1001_list,a_up1002_list,b_up100_list,c_list,\
                    qu_num_list,mulh_num_list,settle_num_list,min_stock_num_list,sell_minute_list]
-    
+
     tabu_list = pd.Series([0 for i in range(len(para_col))])
-    
+
     #ver1901-1907-0.03-1.0-10-2-8-4-50-30-300-40-4--0.001--0.001-0.07-0.082-0.96-0.96-1-9-600
     para_good = [0.03,1,10,2,8,4,50,30,300,40,4,-0.001,-0.001,0.07, 0.082,0.96,0.96,1,5,600]
     print('根据参数信息选取股票...')
@@ -1600,36 +1603,36 @@ if __name__ == '__main__':
             para_change_list.append(best_para.copy())
             print (best_pro)
             print (best_para)
-        
+
     lately_choose = []
     #记录参数变化状况的list
     para_tmp = []
     iter_count = 0
     t_para = best_para.copy()
-    
+
     while (best_pro <= 160)&(count < 40):
-        
+
         #count 为选择邻域次数
         count += 1
         print ('***********************count**************************')
         print (count)
         iter_para = best_para.copy()
-        
+
         #邻域结构就是 中间两个随机选取的参数变动得到的所有参数组合
         para_change = sample(range(len(para_col)),2)
         while ((para_change[0] in lately_choose) | (para_change[1] in lately_choose) | \
         ((tabu_list[para_change[0]] + tabu_list[para_change[1]])>10)):
             para_change = sample(range(len(para_col)),2)
-            
+
         f = para_change[0]
         s = para_change[1]
-        
+
         #增加禁忌 使得上一次随机到的组合不再随机到
         #随机到次数组合多的不再 选中
         lately_choose = para_change
         tabu_list[f] += 1
         tabu_list[s] += 1
-        
+
         try:
             print (t_para[f])
         except IndexError:
@@ -1640,7 +1643,7 @@ if __name__ == '__main__':
                 t_para[s] = para2
                 para_tmp.append(t_para.copy())
         print (len(para_tmp))
-        
+
         #如果在邻域空间中搜索100次还没有任何改进 放弃该邻域空间 para_tmp存放所有的邻域结构
         count_inside = 0
         signal = 0
@@ -1673,7 +1676,7 @@ if __name__ == '__main__':
         if (iter_count >= 5):
             tabu_list = pd.Series([0 for i in range(len(para_col))])
             t_para = dist(para_col)
-    
+
     #print (results)
     end = time.perf_counter()
     print (str(end-start))

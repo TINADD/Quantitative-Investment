@@ -37,15 +37,19 @@ ts.set_token(token)
 #获取20191101-20200620之间的股票数据
 #获取20200101-20200630之间的股票数据
 #获取20200101-20201001之间的股票数据[0101,1001)
-start_date_bef = '20191201' #从当前日期开始下载
-start_date_rel = '20200101' #实际需要的起始日期
-end_date = '20201001' #实际的要获取股票数据的结束日期,获取结果不含该日期
+#获取20201031-20201126之间的股票数据[1031,1126)
+start_date_bef = '20200929' #从当前日期开始下载
+#start_date_bef = '20191201' #从当前日期开始下载
 
-saved_path = 'E:/Stock/version2.0/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
+start_date_rel = '20201116' #实际需要的起始日期
+#start_date_rel = '20200101' #实际需要的起始日期
+end_date = '20201125' #实际的要获取股票数据的结束日期,获取结果不含该日期
+#end_date='20201001' #实际的要获取股票数据的结束日期,获取结果不含该日期
+saved_path = '../stockData/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
 daily_path = saved_path+'DailySingle/' #日线数据存储路径，一只股票一个文件
 fq_path = saved_path+'fqSingle/'  #复权因子存储路径，一只股票一个文件
 final_save_path = saved_path   #存储总的日线数据和复权因子数据
-
+origin_daily_path=saved_path+'originSingle/'
 mkdir(saved_path)
 mkdir(daily_path)
 mkdir(fq_path)
@@ -78,7 +82,7 @@ fq_stocks = pd.DataFrame()#所有股票的复权因子
 cq_stocks_list = []
 #Error stock list 
 error_list = []
-
+code='689009.SH'
 for code in data['ts_code']:
     if code in Get_info_list:
         continue
@@ -93,7 +97,7 @@ for code in data['ts_code']:
         code_df = pro.daily(ts_code=code, start_date=start_date_bef, end_date=end_date)
     except:
         #如果获取数据超时，停0.2秒重新获取
-        time.sleep(0.2)
+        time.sleep(0.1)
         code_df = pro.daily(ts_code=code, start_date=start_date_bef, end_date=end_date)
 
     #add turnover info 增加换手率信息
@@ -292,8 +296,7 @@ for code in data['ts_code']:
     daily_stocks = pd.concat([daily_stocks,code_df])
     #final_df = pd.concat([final_df,code_df])
     Get_info_list.append(code)
-    time.sleep(1)
-    
+    #time.sleep(1)
 print('将所有股票的日线数据保存到一个文件中')    
 #保存初次合成结果
 daily_stocks.to_csv(daily_path + 'tmpDaily.csv') #复权后

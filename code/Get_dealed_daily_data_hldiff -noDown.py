@@ -41,11 +41,11 @@ print(cur_dir_path)
 #获取20200101-20200630之间的股票数据
 #获取20200101-20201001之间的股票数据[0101,1001)
 #获取20200101-20201101之间的股票数据[0101,1001)
-start_date_bef = '20191201' #从当前日期开始下载
-start_date_rel = '20200101' #实际需要的起始日期
-end_date = '20201101' #实际的要获取股票数据的结束日期,获取结果不含该日期
+start_date_bef = '20201101' #从当前日期开始下载
+start_date_rel = '20201119' #实际需要的起始日期
+end_date = '20201125' #实际的要获取股票数据的结束日期,获取结果不含该日期
 
-saved_path = 'F:/Smart实验室/量化投资/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
+saved_path = '../stockData/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
 daily_path = saved_path+'DailySingle/' #日线数据存储路径，一只股票一个文件
 fq_path = saved_path+'fqSingle/'  #复权因子存储路径，一只股票一个文件
 final_save_path = saved_path   #存储总的日线数据和复权因子数据
@@ -150,7 +150,7 @@ def FormatTime(str_x):
         return pd.to_datetime(str_x)
     
 #添加10大股东信息
-top10_df = pd.read_csv(cur_dir_path+'/top10_1116.csv')
+top10_df = pd.read_csv('top10_1125.csv')
 #top10_df.head()
 #print("top10_df",top10_df)
 '''

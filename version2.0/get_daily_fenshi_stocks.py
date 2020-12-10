@@ -4,6 +4,7 @@ import pandas as pd
 import datetime
 import time
 import numpy as np
+import copy
 
 def mkdir(path):
  
@@ -30,18 +31,19 @@ pro = ts.pro_api()
 
 #给定下载日期，比如要测试19年11月到现在的数据，需要从19年10月开始下载
 #获取20200101-20201001之间的股票数据[0101,1001)
-start_date_bef = '20201006' #从当前日期开始下载
-start_date_rel = '20201101' #实际需要的起始日期
+start_date_bef = '20191201' #从当前日期开始下载
+start_date_rel = '20200101' #实际需要的起始日期
 end_date = '20201206' #实际的要获取股票数据的结束日期,获取结果不含该日期
 
 top10_path = '../../stockData/top10.csv'
 saved_path = '../../stockData/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
 daily_path = saved_path+'DailySingle/' #日线数据存储路径，一只股票一个文件
+daily_path_source = saved_path+'DailySingleSource/' #日线数据存储路径，一只股票一个文件
 fenshi_path = saved_path+'Fenshi/'
 mkdir(saved_path)
 mkdir(daily_path)
 mkdir(fenshi_path)
-
+mkdir(daily_path_source)
 #只获取上市的公司股票code
 #只获取上市的公司股票code
 def get_minute_data():
@@ -142,11 +144,14 @@ def get_daily_data():
 
         code_daily['trade_date'] = code_daily['trade_date'].apply(lambda x:datetime.datetime.strptime(str(x),"%Y%m%d"))
         code_daily['cq_sign'] = 0
-        code_df['ts_code'] = code_daily['ts_code'].apply(lambda x:int(x.replace('.SH','').replace('.SZ','')))
+        #code_daily.to_csv(daily_path+str(code)+'.csv',index=False)
+        #print(code_daily)
+        code_df=copy.deepcopy(code_daily)
+        code_df['ts_code'] = code_df['ts_code'].apply(lambda x:int(x.replace('.SH','').replace('.SZ','')))
         code_df = code_df[['trade_date','ts_code','open','high','close','pre_close','vol','mean_price','amount','pct_chg','turnover_rate','hold_ratio',\
                                'top10_d_r','industry','totals_mv','PeriodToMar','cq_sign']]
         code_df.dropna(how='any',inplace=True)#存在NAN值时删除该行
-        stocks_daily_source = pd.concat([stocks_daily_source,code_df])
+        stocks_daily_source = pd.concat([stocks_daily_source,code_df])#zqy保留未处理之前的合并日线数据
         code_daily.dropna(how='any',inplace=True)#存在NAN值时删除该行
         
         #保存前12个交易日涨幅
@@ -234,5 +239,5 @@ def get_daily_data():
     stocks_daily_final.to_csv(saved_path+'new_daily'+start_date_rel+'-'+end_date+'.csv',index=False)
 
 if __name__ == '__main__':
-    #get_daily_data()
-    get_minute_data()
+    get_daily_data()
+    #get_minute_data()
