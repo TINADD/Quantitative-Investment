@@ -45,7 +45,7 @@ def update_data(token,path,level):
     today_before_30d_str = today_before_30d_format.strftime('%Y%m%d')
 
 
-    #得到交易日历
+    #得到交易日历 前30个交易日
     date_df = pro.trade_cal(exchange='', start_date=today_before_30d_str, end_date=today)
     #更新当天的十大股东占比
     top10_path = path+'top10.csv'

@@ -1,6 +1,13 @@
 #pandas处理日期，按照日期筛选
 import pandas as pd
+import os
 
+start_date = '20200101'
+end_date = '20200201'
+start_date = pd.to_datetime(start_date)
+end_date = pd.to_datetime(end_date)
+
+data_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stockdata/dataDownload/'+start_date_rel+'_'+end_date+'/'
 daily_path = ""
 fenshi_path = ""
 
@@ -8,10 +15,7 @@ new_daily_path = ""
 new_fenshi_path = ""
 
 
-start_date = '20200101'
-end_date = '20200201'
-start_date = pd.to_datetime(start_date)
-end_date = pd.to_datetime(end_date)
+
 
 #读文件
 daily_df = pd.read_csv(daily_path)
