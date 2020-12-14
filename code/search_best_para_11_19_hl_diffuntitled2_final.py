@@ -96,18 +96,24 @@ import time
 import os
 from random import sample
 
-start_date = '2020-02-01'
-start_date_path = '20200201'
-end_date = '2020-11-01'
-end_date_path = '20201101'                                                                                                                                                                                                                                                                                                                                                                                                                                 
-fill_date = '2020-11-01'
+#20200101-20200201
+#start_date = '2020-01-01'
+#start_date_path = '20200101'
+#start_date_path = '20201101'
+start_date_path = '20180101'
+#end_date = '2020-02-01'
+#end_date_path = '20200201'  
+#end_date_path = '20201201'
+end_date_path = '20190101'                                                                                                                                                                                                                                                                                                                                                                                                                               
+fill_date = '2020-12-01'
 
-data_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stockdata/dataDownload/'+ start_date +'_'+end_date+'/'
+data_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stockdata/'+ start_date_path +'_'+end_date_path+'/'
+print(data_path)
 
 #2019/11/01-2020/04/30
-fenshi_path = 'fenshi_after_fq_0201_1101.csv'
-daily_path = '1214-daily20200101-20201206.csv'
-data_path = '1214-results-0101-1201-num5/'
+fenshi_path = data_path + '1214-fenshi'+ start_date_path +'_'+end_date_path + '.csv'
+daily_path = data_path + '1214-daily' + start_date_path +'_'+end_date_path  + '.csv'
+data_path = data_path + '1214-results-'+ start_date_path +'_'+end_date_path +'-num5/'
 
 #Q
 top10sh_list = [i for i in range(20,80,10)] #十大股东占比
@@ -1466,6 +1472,9 @@ print ('股票日期:',date_list)
 print('读取分时数据')
 #获取分时数据
 fenshi_df = pd.read_csv(fenshi_path) #DataFrame
+fenshi_df.rename(columns={'ts_code':'code'},inplace=True)
+fenshi_df['code'] =fenshi_df['code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
+
 #过滤掉688开头的股票
 fenshi_df = fenshi_df.loc[(fenshi_df['code']<688000 )| (fenshi_df['code'] >=689000) ]
 #print('分时数据时间',fenshi_df['datetime'])
