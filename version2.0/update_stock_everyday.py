@@ -45,7 +45,7 @@ def update_data(token,path,level):
     today_before_30d_str = today_before_30d_format.strftime('%Y%m%d')
 
 
-    #得到交易日历 前30个交易日
+    #得到交易日历
     date_df = pro.trade_cal(exchange='', start_date=today_before_30d_str, end_date=today)
     #更新当天的十大股东占比
     top10_path = path+'top10.csv'
@@ -94,7 +94,7 @@ def update_data(token,path,level):
             daily_path = path + 'daily_data.csv'
             
             #得到股票基础信息
-            data = pro.stock_basic(exchange_id='', is_hs='', fields='ts_code,symbol,name,list_date,list_status')
+            data = pro.stock_basic(exchange_id='', is_hs='',list_status='L', fields='ts_code,symbol,name,list_date,list_status')
             #得到非ST股票
             data['st_sig'] = data['name'].apply(lambda x:1 if x.startswith('ST') else 0)
             data = data[data['st_sig']==0]
@@ -159,7 +159,7 @@ def update_data(token,path,level):
             #得到总市值信息
             code_df['totals_mv'] = code_df['close']*code_df['total_share']
             code_df['totals_mv'] = code_df['totals_mv']/10000
-            code_df['mean_price'] = code_df['amount']*10/code_df['vol']
+            code_df['mean_price'] = code_df['amount']*10/code_df['vol'] #之前计算过了
             code_df['trade_date'] = code_df['trade_date'].apply(lambda x:datetime.datetime.strptime(str(x),"%Y%m%d"))
             #code_df['list_date'] = code_df['list_date'].apply(lambda x:datetime.datetime.strptime(x,"%Y%m%d"))
             code_df['PeriodToMar'] = code_df['trade_date'] - code_df['list_date']
