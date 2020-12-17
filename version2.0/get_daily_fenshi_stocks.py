@@ -136,9 +136,10 @@ def get_daily_data():
         code_daily = pd.merge(code_daily,top10_df,how='left',on=['ts_code'])
         
         #得到总市值信息
-        code_daily['totals_mv'] = code_daily['close']*code_daily['total_share']#zqy：这个公式哪里来的
-        code_daily['totals_mv'] = code_daily['totals_mv']/10000 #万元为单位
-        code_daily['totals1'] = code_daily['total_share']*code_daily['pre_close']
+        #code_daily['totals_mv'] = code_daily['close']*code_daily['total_share']#zqy：这个公式哪里来的--可以直接获取到
+        code_daily['totals_mv'] = code_daily['totals_mv']/10000 #zqy:万元为单位--总市值
+        code_daily['totals1'] =code_daily['totals_mv']
+        #code_daily['totals1'] = code_daily['total_share']*code_daily['pre_close']#zqy:为何要重新计算
 
         code_daily['trade_date'] = code_daily['trade_date'].apply(lambda x:datetime.datetime.strptime(str(x),"%Y%m%d"))
         code_daily['cq_sign'] = 0
@@ -159,7 +160,7 @@ def get_daily_data():
         #确定买入前五天涨幅
         code_daily['cp_sum_five'] = 0
         for j in range(1,6):
-            code_daily['cp_sum_five'] = code_daily['cp_sum_five'] + code_daily['cp'+str(j)]
+            code_daily['cp_sum_five'] = code_daily['cp_sum_five'] + code_daily['cp'+str(j)]#zqy:这里应该是0,5吧！买入前5天包括选股当天
         
         #后两个交易日
         code_daily['day_tomo'] = code_daily['trade_date'].shift(1)
@@ -181,6 +182,7 @@ def get_daily_data():
         code_daily['close3'] = code_daily['close'].shift(-3)
 
         #policy3:（买入前两天的收盘最高价-买入前两天开盘最低价）/买入前两天开盘最低价）
+        #TODO:这里只保存当前当天买入的吗
         code_daily['close_highest_2bef'] = code_daily[['close1','close2']].max(axis=1)
         code_daily['open_lowest_2bef'] = code_daily[['open1','open2']].min(axis=1)
 

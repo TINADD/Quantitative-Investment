@@ -104,16 +104,17 @@ start_date_path = '20180101'
 #end_date = '2020-02-01'
 #end_date_path = '20200201'  
 #end_date_path = '20201201'
-end_date_path = '20190101'                                                                                                                                                                                                                                                                                                                                                                                                                               
+end_date_path = '20181231'
 fill_date = '2020-12-01'
 
-data_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stockdata/'+ start_date_path +'_'+end_date_path+'/'
+data_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stockData/'+ start_date_path +'_'+end_date_path+'/'
 print(data_path)
 
 #2019/11/01-2020/04/30
 fenshi_path = data_path + '1214-fenshi'+ start_date_path +'_'+end_date_path + '.csv'
 daily_path = data_path + '1214-daily' + start_date_path +'_'+end_date_path  + '.csv'
 data_path = data_path + '1214-results-'+ start_date_path +'_'+end_date_path +'-num5/'
+
 
 #Q
 top10sh_list = [i for i in range(20,80,10)] #十大股东占比
@@ -503,7 +504,7 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
     for stock in choose_matrix1:
         #低开的界限
         '''
-        若开盘价open低开，市价≥ lb_p*30天最高价]-policy4_std，等到市价=min{昨日均价,昨日收盘}时或30天最高价，执行买入
+        若开盘价open低开，市价≥ lb_p*30天最高价]-policy4_std，等到市价=min{昨日均价,昨日收盘}时或30天最高价，执行买入--zqy：这里的昨日是指选股当天吗？
         若是开盘open低于min{昨日均价,昨日收盘}，直接买入
         ⑤低开，市价＜lb_p*30天最高价，等到市价达到max{昨日均价，昨日收盘，para_c*30天最高价}时，执行买入
         '''
@@ -583,7 +584,7 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
     print (str(b_end-b_start))
     return final_list
 
-def get_profit_update(data_path,sp,limit,dataset):
+def get_profit_update(data_path,sp,limit,dataset,data_result_path):
     data = dataset[['code','buy','sell','st_or_dy','num']]
     #有些静态选入的股票 并没有买入 所以要去除这一部分
     data.buy = data.buy.astype(float)
@@ -591,13 +592,12 @@ def get_profit_update(data_path,sp,limit,dataset):
     #data是算所有选入的股票 data1是算所有买入的股票
     data1 = data[np.isnan(data['sell']).apply(lambda x:not x)]
     #cost是每股的成本的百分比
-    cost = 0.002
+    cost = 0.002#[TODO]为何成本的百分比不会按股票个数除后得到的，是一个定值呢,是不是该按选股数量算
     #这里收益指的是收益率，由于相当于用同样的钱去买每只股，故收益率可以简单平均
     data1['profit'] = (data1['sell'] - data1['buy'])/data1['buy'] - cost
     
     result_all = data.groupby(data.index).sum()
 
-    
     result_buy_count = data1.groupby(data1.index).sum()
     result_buy = data1.groupby(data1.index).mean()
     result_buy['NotBuyNum']  = result_all['num'] - result_buy_count['num']
@@ -610,7 +610,7 @@ def get_profit_update(data_path,sp,limit,dataset):
     pro = np.zeros(days)
     diff = np.zeros(days)
     #iloc通过行号索引；loc通过行标签索引
-    pro[0] = 100 + 100*result_buy.iloc[0].loc['buy_rate']*(result_buy.iloc[0].loc['profit'])
+    pro[0] = 100 + 100*result_buy.iloc[0].loc['buy_rate']*(result_buy.iloc[0].loc['profit'])#TODO：总价不应该等于本金+收益额（收益率*本金）吗？
     diff[0] = 0
     for i in range(1,days):
         #没有价格限制
@@ -625,7 +625,7 @@ def get_profit_update(data_path,sp,limit,dataset):
     #增加判断 结果不好则不产生图
     #if (pro[-1]>=limit) & (result_buy.shape[0]>(d_length//8)):
     if (pro[-1]>=limit):
-        data_file = data_path
+        data_file = data_result_path
         mkdir(data_file)
         Data = result_buy[['profit','real_profit','buy_num','all_num','diff']]
         Data = Data.astype(float)
@@ -644,7 +644,7 @@ def get_profit_update(data_path,sp,limit,dataset):
     return result_buy,data_file
 
 #最新的那个策略 （高级预警机制带有延长期）
-def make_stock_result_with_advanced_num(p,limit,hl_limit):
+def make_stock_result_with_advanced_num(p,limit,hl_limit,save_path):
     '''
     p:参数列表
     limit:股票收益的下界,低于这个值就不生成文件
@@ -654,12 +654,16 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
     a_up1001,a_up1002,b_up100,c,lb_p,para_c,ub_p,min_stock_num,sell_minute = p[11],p[12],p[13],p[14],p[15],p[16],p[17],p[18],p[19]
     sp = "20200201-20201101/"
     data_file = data_path
+    data_file=save_path
+    data_result_choose_path = data_file + '/choose/'
+    mkdir((data_result_choose_path))
     mkdir(data_file)
-    f = open("F:/SmartLab/Quantitative-Investment/code/change1.txt","w")
+    mkdir(data_result_choose_path)
+    f = open(os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+"/Log/change1.txt","w")
     
-    out_log = open("F:/SmartLab/Quantitative-Investment/code/outlog.txt","w")
-    out_002741 = open("F:/SmartLab/Quantitative-Investment/code/outlog.txt","w")
-    out_601700 = open("F:/SmartLab/Quantitative-Investment/code/outlog.txt","w")
+    out_log = open(os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+"/Log/outlog.txt","w")
+    out_002741 = open(os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+"/Log/outlog.txt","w")
+    out_601700 = open(os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+"/Log/outlog.txt","w")
 
     start_day = 0
     
@@ -724,233 +728,78 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         print("开始选股......")
         #静态动态 共同条件 直接把涨幅信息放在这里  总市值大于30小于300
         flag_2512 = True
-        flag_601700 = True
-        flag_300480 = True
-        flag_300493 = True
-        flag_603626 = True
+
         if( '002512' not in  tmp_matrix[:,1]):
             out_log.write('日线数据里没有002512这只股票\n')
             flag_2512  = False
-        if('601700' not in  tmp_matrix[:,1]):
-            out_log.write('日线数据里没有601700这只股票\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1]):
-            out_log.write('日线数据里没有300480这只股票\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1]):
-            out_log.write('日线数据里没有300493这只股票\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1]):
-            out_log.write('日线数据里没有603626这只股票\n')
-            flag_603626  = False
         
         #选取股票总市值小于totals1_up 300
         choose_matrix = tmp_matrix[tmp_matrix[:,2] < totals1_up]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
             out_log.write('股票002512总市值>= '+str(totals1_up)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix[:,1] and flag_601700):
-            out_log.write('股票601700总市值>= '+str(totals1_up)+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480总市值>= '+str(totals1_up)+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493总市值>= '+str(totals1_up)+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626总市值>= '+str(totals1_up)+'\n')
-            flag_603626  = False
         
         #选取股票总市值大于totals1 30
         choose_matrix = choose_matrix[choose_matrix[:,2] > totals1]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
             out_log.write('股票002512总市值<= '+str(totals1)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix[:,1] and flag_601700):
-            out_log.write('股票601700总市值<= '+str(totals1)+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480总市值<= '+str(totals1)+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493总市值<= '+str(totals1)+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626总市值<= '+str(totals1)+'\n')
-            flag_603626  = False
+
         #根据policy3选取股票 买入前两天到达的涨幅 最高收盘-最低开盘/最低开盘
         choose_matrix = choose_matrix[choose_matrix[:,3] < policy3]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
             out_log.write('股票002512 policy3 >= '+str(policy3)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix[:,1] and flag_601700):
-            out_log.write('股票601700 policy3 >= '+str(policy3)+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480 policy3 >= '+str(policy3)+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 policy3 >= '+str(policy3)+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603262 policy3 >= '+str(policy3)+'\n')
-            flag_603626  = False
+
         #新增不选取除权的股票 
         choose_matrix = choose_matrix[choose_matrix[:,19] != 1]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
             out_log.write('股票002512 已除权\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix[:,1] and flag_601700):
-            out_log.write('股票601700已除权\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480 已除权\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 已除权\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626 已除权\n')
-            flag_603626  = False
+
         #新增对前五天的涨幅的约束
         choose_matrix = choose_matrix[choose_matrix[:,18] < cp_up]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
             out_log.write('股票002512 cp_up >= '+str(cp_up)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix[:,1] and flag_601700):
-            out_log.write('股票601700 cp_up >= '+str(cp_up)+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480 cp_up >= '+str(cp_up)+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 cp_up >= '+str(cp_up)+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626 cp_up >= '+str(cp_up)+'\n')
-            flag_603626  = False
         
         choose_matrix = choose_matrix[choose_matrix[:,18] > cp_down]
         if('002512' not in  choose_matrix[:,1] and flag_2512 ):
             out_log.write('股票002512 cp_down <= '+str(cp_down)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix[:,1] and flag_601700):
-            out_log.write('股票601700 cp_down <= '+str(cp_down)+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480 cp_down <= '+str(cp_down)+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 cp_down <= '+str(cp_down)+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626 cp_down <= '+str(cp_down)+'\n')
-            flag_603626  = False
         
         #静态选股规则
         choose_matrix1 = choose_matrix[choose_matrix[:,7] < policy1*(1+para2)] 
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 policy1 >= '+str(policy1*(1+para2))+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,1] and flag_601700):
-            out_log.write('股票601700 policy1 >= '+str(policy1*(1+para2))+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480 ):
-            out_log.write('股票300480 policy1 >= '+str(policy1*(1+para2))+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 policy1 >= '+str(policy1*(1+para2))+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626 policy1 >= '+str(policy1*(1+para2))+'\n')
-            flag_603626  = False
         
         choose_matrix1 = choose_matrix1[choose_matrix1[:,8] > policy2]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 policy2 <= '+str(policy2)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,1] and flag_601700):
-            out_log.write('股票601700 policy2 <= '+str(policy2)+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480 policy2 <= '+str(policy2)+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 policy2 <= '+str(policy2)+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626 policy2 <= '+str(policy2)+'\n')
-            flag_603626  = False
         
         choose_matrix1 = choose_matrix1[choose_matrix1[:,9] > turnover*(1-para2)]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 换手率 <= '+str(turnover*(1-para2))+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,1] and flag_601700):
-            out_log.write('股票601700 换手率 <= '+str(turnover*(1-para2))+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480 换手率 <= '+str(turnover*(1-para2))+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 换手率 <= '+str(turnover*(1-para2))+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626 换手率 <= '+str(turnover*(1-para2))+'\n')
-            flag_603626  = False
         
         choose_matrix1 = choose_matrix1[choose_matrix1[:,14] > top10sh*(1-para1)]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,1] and flag_601700):
-            out_log.write('股票601700 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626 十大股东占比<= '+str(top10sh*(1-para1)) + '\n')
-            flag_603626  = False
         
         #增加价格筛选 即对于股票昨日收盘价格进行筛选
         choose_matrix1 = choose_matrix1[choose_matrix1[:,10] <= price_up]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 price_up >'+str(price_up)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,1] and flag_601700):
-            out_log.write('股票601700 price_up >'+str(price_up)+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480 price_up >'+str(price_up)+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 price_up >'+str(price_up)+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626 price_up >'+str(price_up)+'\n')
-            flag_603626  = False
         
         choose_matrix1 = choose_matrix1[choose_matrix1[:,10] >= price_down]
         if('002512' not in  choose_matrix1[:,1] and flag_2512 ):
             out_log.write('股票002512 price_down <'+str(price_down)+'\n')
             flag_2512  = False
-        if('601700' not in  choose_matrix1[:,1] and flag_601700):
-            out_log.write('股票601700 price_down <'+str(price_down)+'\n')
-            flag_601700 = False
-        if( '300480' not in  tmp_matrix[:,1] and flag_300480):
-            out_log.write('股票300480 price_down <'+str(price_down)+'\n')
-            flag_300480  = False
-        if( '300493' not in  tmp_matrix[:,1] and flag_300493):
-            out_log.write('股票300493 price_down <'+str(price_down)+'\n')
-            flag_300493  = False
-        if( '603626' not in  tmp_matrix[:,1] and flag_603626):
-            out_log.write('股票603626 price_down <'+str(price_down)+'\n')
-            flag_603626  = False
+
         #新增
         #对于前22个交易日涨幅筛选
         #print('股票前22个交易日涨幅要<=',hl_limit,'先不用这个策略')
@@ -964,7 +813,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         totals1 settlement open mean_price_before 30_close_highest close
         '''
         print('决定买入，将买入的格式改成之后需要的格式')
-        print('决定买入,choose_matrix1.size',choose_matrix1.size)
+        print('决定买入,choose_matrix1.size',choose_matrix1.size)#TODO: 当天选的直接当天买了？这里不应该买的是前一天选的股票吗？
         if(choose_matrix1.size == 0):
             if signal == 1:
                 count += 1
@@ -988,15 +837,14 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
         sd_list = np.zeros((m), dtype=np.int)
         st_buy_matrix = np.column_stack((st_buy_matrix,sd_list))
         print('st_buy_matrix.columns',st_buy_matrix.shape[1])
-        st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[15,16,17]]))
+        st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[15,16,17]]))#code datatime ...(11)sd_list 15,16,17都是一些无关变量呀呀呀！！
         print('st_buy_matrix.columns',st_buy_matrix.shape[1])
-        st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[2]]))
+        st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[2]]))#，totals
         print('st_buy_matrix.columns',st_buy_matrix.shape[1])
-        st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[10]]))
+        st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[10]]))#settlement
         print('st_buy_matrix.columns',st_buy_matrix.shape[1])
-        st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[4,12,11,21]]))
-        print('st_buy_matrix.columns',st_buy_matrix.shape[1])
-        
+        st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[4,12,11,21]]))#open mean4_value 30_close close
+        print('st_buy_matrix.columns',st_buy_matrix)
         '''之后如果要加上动态选股的，则把前面的加上 把下面这句话去掉。'''
         buy_matrix = st_buy_matrix
 
@@ -1243,7 +1091,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
                 #不处于高级预警的影响范围
                 else:
                     #买入股票信息写入文件
-                    df_day.to_csv(data_file + '/' + str(day.date()) + '.csv', index=False)
+                    df_day.to_csv(data_result_choose_path + '/' + str(day.date()) + '.csv', index=False)
                     df_day_earn = df_day[df_day['profit']>0]
                     df_day_lose = df_day[df_day['profit']<0]
                     final_choose_df = pd.concat([final_choose_df,df_day])
@@ -1276,7 +1124,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
             if (df_day.shape[0]>min_stock_num):#出现大于5的 预警消除 前一天便可以判断 相当于早上判断这个 可是一天过完之后还是得判断会不会进入预警期
                 signal = 0
                 if advanced_signal == 0:
-                    df_day.to_csv(data_file + '/' + str(day.date()) + '.csv', index=False)
+                    df_day.to_csv(data_result_choose_path + '/' + str(day.date()) + '.csv', index=False)
                     df_day_earn = df_day[df_day['profit']>0]
                     df_day_lose = df_day[df_day['profit']<0]
                     final_choose_df = pd.concat([final_choose_df,df_day])
@@ -1324,7 +1172,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit):
     data['num'] = 1     #默认每只一份钱，留了个空位以防万一之后每只股票买的数量不一样多
     #print(data.head())
 
-    result_real_pro,data_file = get_profit_update(data_path,sp,limit,data)
+    result_real_pro,data_file = get_profit_update(data_path,sp,limit,data,data_file)
     l = result_real_pro.shape[0]
     #print (result_real_pro)
     
@@ -1424,7 +1272,6 @@ def get_profit_update_with_price_limit(data_file,dataset):
 print('初始化分时数据和日线数据路径')
 print('创建策略参数文件夹')
 mkdir(data_path)
-
 #获取日线的数据
 '''
 final_matrix格式
@@ -1472,8 +1319,8 @@ print ('股票日期:',date_list)
 print('读取分时数据')
 #获取分时数据
 fenshi_df = pd.read_csv(fenshi_path) #DataFrame
-fenshi_df.rename(columns={'ts_code':'code'},inplace=True)
-fenshi_df['code'] =fenshi_df['code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
+#fenshi_df.rename(columns={'ts_code':'code'},inplace=True)
+#fenshi_df['code'] =fenshi_df['code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
 
 #过滤掉688开头的股票
 fenshi_df = fenshi_df.loc[(fenshi_df['code']<688000 )| (fenshi_df['code'] >=689000) ]
@@ -1555,19 +1402,44 @@ if __name__ == '__main__':
     tabu_list = pd.Series([0 for i in range(len(para_col))])
     
     #ver1901-1907-0.03-1.0-10-2-8-4-50-30-300-40-4--0.001--0.001-0.07-0.082-0.96-0.96-1-9-600
+
     para_good = [0.03,1,10,2,8,4,50,30,300,40,4,-0.001,-0.001,0.07, 0.082,0.96,0.96,1,5,600]
+    '''
+    iterNum = 1
+    print(time.strftime('%Y-%m-%d-%H%M%S', time.localtime(time.time())))
+    save_path = data_path + str(time.strftime('%Y-%m-%d-%H%M%S', time.localtime(time.time()))) + '/'
+    mkdir(save_path)
+    file_handle = open(save_path + '/para.txt', mode='w')
+    file_handle.write(str(para_good))
+    result = make_stock_result_with_advanced_num(para_good, limit, 0.18, save_path)
     print('根据参数信息选取股票...')
     #测试特定参数（现在用的参数）的结果
-    result = make_stock_result_with_advanced_num(para_good,0,0.18)
+    '''
+    iterNum = 0
+    print(time.strftime('%Y-%m-%d-%H%M%S', time.localtime(time.time())))
+    state_time = time.strftime('%Y-%m-%d-%H%M%S', time.localtime(time.time()))
+    save_path = data_path + str(state_time) + '/'+ str(iterNum) + '/'
+    mkdir(save_path)
+    file_handle = open(save_path + '/para.txt', mode='w')
+    file_handle.write(str(para_good))
+    result = make_stock_result_with_advanced_num(para_good,0,0.18,save_path)
     #result = make_stock_result_with_advanced_num(para_good,100,0.18)
     print('获取股票end')
-#给定参数空间最好值
-'''
-    for i in range(1000):
+    '''
+    #给定参数空间最好值
+    
+    for i in range(2000):
         para = random_choose(para_col) #随机获取一组参数值
         #输出para
         print("para random_choose",para)
-        result = make_stock_result_with_advanced_num(para,limit,0.18)
+        iterNum=iterNum+1
+        print(time.strftime('%Y-%m-%d-%H%M%S', time.localtime(time.time())))
+        state_time=time.strftime('%Y-%m-%d-%H%M%S', time.localtime(time.time()))
+        save_path = data_path+str(state_time)+'/'+str(iterNum)+'/'
+        mkdir(save_path)
+        file_handle = open(save_path+'/para.txt', mode='w')
+        file_handle.write(str(para))
+        result = make_stock_result_with_advanced_num(para,limit,0.18,save_path)
         try:
             tmp_pro = result[len(result)-1]
             limit  = tmp_pro
@@ -1586,15 +1458,18 @@ if __name__ == '__main__':
             para_change_list.append(best_para.copy())
             print (best_pro)
             print (best_para)
-        
+    '''
+    best_para = para_good
+    para=best_para
+    best_pro=result[len(result)-1]
     lately_choose = []
     #记录参数变化状况的list
     para_tmp = []
     iter_count = 0
     t_para = best_para.copy()
-    
-    while (best_pro <= 160)&(count < 40):
-        
+    print('best_pro:'+str(best_pro))
+    while (best_pro <= 16000000)&(count < 100):
+        #iterNum = iterNum + 1
         #count 为选择邻域次数
         count += 1
         print ('***********************count**************************')
@@ -1635,7 +1510,14 @@ if __name__ == '__main__':
             if ((count_inside>80) &(signal == 0)):
                 break
             count_inside += 1
-            result = make_stock_result_with_advanced_num(i,limit,0.18)
+            iterNum = iterNum + 1
+
+            #save_path = data_path + str(time.strftime('%Y-%m-%d-%H%M%S',time.localtime(time.time())))+'/'
+            save_path = data_path + str(state_time) + '/' + str(iterNum) + '/'
+            mkdir(save_path)
+            file_handle = open(save_path + '/para.txt', mode='w')
+            file_handle.write(str(i))
+            result = make_stock_result_with_advanced_num(i,limit,0.18,save_path)
             try:
                 tmp_pro = result[len(result)-1]
                 limit = tmp_pro
@@ -1669,4 +1551,3 @@ if __name__ == '__main__':
     for i in best_para:
         tmp_name = tmp_name+'-'+str(i)
     os.renames(data_path + tmp_name,data_path + 'Best-'+tmp_name)
-'''
