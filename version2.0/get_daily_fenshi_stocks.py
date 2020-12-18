@@ -30,12 +30,12 @@ pro = ts.pro_api()
 
 #给定下载日期，比如要测试19年11月到现在的数据，需要从19年10月开始下载
 #获取20200101-20201001之间的股票数据[0101,1001)
-start_date_bef = '20201006' #从当前日期开始下载
-start_date_rel = '20201101' #实际需要的起始日期
-end_date = '20201206' #实际的要获取股票数据的结束日期,获取结果不含该日期
+start_date_bef = '20171201' #从当前日期开始下载
+start_date_rel = '20180101' #实际需要的起始日期
+end_date = '20190101' #实际的要获取股票数据的结束日期,获取结果不含该日期
 
-top10_path = '../../stockData/top10.csv'
-saved_path = '../../stockData/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
+top10_path = '../stockData/top10_2018.csv'
+saved_path = '../stockData/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
 daily_path = saved_path+'DailySingle/' #日线数据存储路径，一只股票一个文件
 fenshi_path = saved_path+'Fenshi/'
 mkdir(saved_path)
@@ -56,11 +56,12 @@ def get_minute_data():
 
     stocks_minute = pd.DataFrame() #记录所有股票的分时数据 1min
     for code in stock_basic['ts_code']:
+        print(code)
         try:
-            code_min = ts.pro_bar(ts_code=code, adj='qfq',start_date=start_date_rel, end_date=end_date_rel, freq='1min')
+            code_min = ts.pro_bar(ts_code=code, adj='qfq',start_date=start_date_rel, end_date=end_date_rel, freq='5min')
         except:
-            time.sleep(1)
-            code_min = ts.pro_bar(ts_code=code, adj='qfq',start_date=start_date_rel, end_date=end_date_rel, freq='1min')
+            time.sleep(0.5)
+            code_min = ts.pro_bar(ts_code=code, adj='qfq',start_date=start_date_rel, end_date=end_date_rel, freq='5min')
         if(code_min is None):
             print('code_min is None')
             print(code_min)
@@ -74,6 +75,7 @@ def get_minute_data():
         code_min = code_min[code_min.time<='11:00:00']
         code_min = code_min[['trade_time','ts_code','open','close','high','low','date','time']]
         stocks_minute = pd.concat([stocks_minute,code_min])
+
     #stocks_minute['ts_code'] =stocks_minute['ts_code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
     #修改列名
     #stocks_minute.rename(columns={'trade_time':'datetime','ts_code':'code'},inplace=True)
@@ -136,16 +138,16 @@ def get_daily_data():
         code_daily = pd.merge(code_daily,top10_df,how='left',on=['ts_code'])
         
         #得到总市值信息
-        #code_daily['totals_mv'] = code_daily['close']*code_daily['total_share']#zqy：这个公式哪里来的--可以直接获取到
-        code_daily['totals_mv'] = code_daily['totals_mv']/10000 #zqy:万元为单位--总市值
-        code_daily['totals1'] =code_daily['totals_mv']
-        #code_daily['totals1'] = code_daily['total_share']*code_daily['pre_close']#zqy:为何要重新计算
+        code_daily['total_mv'] = code_daily['close']*code_daily['total_share']#zqy：这个公式哪里来的--可以直接获取到
+        code_daily['total_mv'] = code_daily['total_mv']/10000 #zqy:万元为单位--总市值
+        code_daily['totals1'] =code_daily['total_mv']
+        code_daily['totals1'] = code_daily['total_share']*code_daily['pre_close']#zqy:为何要重新计算-选股是前一天的总市值，bingo
 
         code_daily['trade_date'] = code_daily['trade_date'].apply(lambda x:datetime.datetime.strptime(str(x),"%Y%m%d"))
         code_daily['cq_sign'] = 0
         code_df['ts_code'] = code_daily['ts_code'].apply(lambda x:int(x.replace('.SH','').replace('.SZ','')))
         code_df = code_df[['trade_date','ts_code','open','high','close','pre_close','vol','mean_price','amount','pct_chg','turnover_rate','hold_ratio',\
-                               'top10_d_r','industry','totals_mv','PeriodToMar','cq_sign']]
+                               'top10_d_r','industry','total_mv','PeriodToMar','cq_sign']]
         code_df.dropna(how='any',inplace=True)#存在NAN值时删除该行
         stocks_daily_source = pd.concat([stocks_daily_source,code_df])
         code_daily.dropna(how='any',inplace=True)#存在NAN值时删除该行
@@ -188,7 +190,7 @@ def get_daily_data():
 
         code_daily['policy3'] = (code_daily['close_highest_2bef']-code_daily['open_lowest_2bef'])/code_daily['open_lowest_2bef']*100
 
-        #获取前30天的收盘最高价&收盘最低价
+        #获取前30天的收盘最高价&收盘最低价==zqy：[TODO]需要前30个交易日
         code_daily['close_highest'] = 0
         code_daily['close_lowest'] = 0
         for i in range(0,code_daily.shape[0]-22,1):
