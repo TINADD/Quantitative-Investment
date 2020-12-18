@@ -26,8 +26,8 @@ fill_date = '2020-12-01'
 data_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stockData/'+ start_date_path +'_'+end_date_path+'/'
 print(data_path)
 
-fenshi_path = data_path + 'fenshi_after_fq_0201_1101.csv'
-daily_path = data_path + '1216-daily' + start_date_path +'_'+end_date_path  + '.csv'
+fenshi_path = data_path + '1216-fenshi20180101-20181231.csv'
+daily_path = data_path + '1214-daily20180101_20181231.csv'
 
 results_data_path = data_path + '1216-results-'+ start_date_path +'_'+end_date_path +'-num5'
 
@@ -400,8 +400,8 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
             print (stock[11])
             time.sleep(60)
         #stock[12]:昨日均价；stock[10]:昨日收盘价    
-        policy_4_value = min(stock[12],stock[10])
-        policy_5_value = max(stock[12],stock[10],stock[11]*para_c)
+        policy_4_value = min(stock[12],stock[10])#低开
+        policy_5_value = max(stock[12],stock[10],stock[11]*para_c)#低开达到max（昨日均价，昨日收盘价，para_c*30天最高价）
         
         buy_list[2] = policy4_std
         buy_list[3] = policy_4_value
@@ -416,16 +416,18 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
         #开盘价高于昨日收盘
         if stock[4]>stock[10]:
             #开盘小于收盘价*ub_p 直接开盘买入 策略1
-            if(stock[4]/stock[10]<=ub_p):
+            #zqy： --市值直接用了开盘价，相当于开盘价不满足，后面即使市值满足条件也不会买入
+            if(stock[4]<=stock[10]*ub_p):
                 buy_list[0] = stock[4] #开盘价买入
                 buy_list[1] = 1
             #开盘大于收盘价*ub_p 等跌到最低价<=收盘价*ub_p买入 策略1
             else:
+                #等回调到昨日收盘价时买入
                 if(stock[13]/stock[10]<=ub_p):
                     buy_list[0] = stock[10]*ub_p #昨日收盘*ub_p
                     buy_list[1] = 1
                 else:
-                    buy_list[1] = 6 #?
+                    buy_list[1] = 6 #?不执行买入
                 
         #平开 的情况      直接开盘价买入  
         elif stock[4]==stock[10]: #今日开盘等于昨日收盘价
@@ -438,12 +440,14 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
             #等市价达到 min{昨日收盘，昨日均价}再买入或者开盘低于此最小值直接买入
             if(stock[4]>=policy4_std): #policy4_std = stock[11]*lb_p
                 #开盘小于min{昨日收盘，昨日均价} 直接买入
-                if(stock[4]/policy_4_value<=1): #policy_4_value = min(stock[12],stock[10])
+                if (stock[4]<policy_4_value):
+                #if(stock[4]policy_4_value<=1): #policy_4_value = min(stock[12],stock[10])
                     buy_list[0] = stock[4]
                     buy_list[1] = 4
                     
                 #开盘不小于 min{昨日收盘，昨日均价} 但是最低达到过 min{昨日收盘，昨日均价} 以min{昨日收盘，昨日均价}买入
-                elif(stock[13]/policy_4_value<=1):
+                #elif(stock[13]/policy_4_value<=1):
+                elif (stock[13] <=policy_4_value):
                     buy_list[0] = policy_4_value
                     buy_list[1] = 4
                     
@@ -455,7 +459,7 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
             # 等市价达到max{昨日收盘，昨日均价}买入 此时开盘都小于昨日收盘了 肯定小于max{昨日收盘，昨日均价}
             #所以只需要看 能不能达到 max{昨日收盘，昨日均价} 能就买 不能就不买入
             else: #最高价high >=  max(昨日均价,昨日收盘,stock[11]*para_c)
-                if(stock[5]/policy_5_value>=1): #policy_5_value = max(stock[12],stock[10],stock[11]*para_c)
+                if(stock[5]>=policy_5_value): #policy_5_value = max(stock[12],stock[10],stock[11]*para_c)
                     buy_list[0] = policy_5_value
                     buy_list[1] = 5
                 else:
@@ -715,6 +719,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit,save_path):
             continue
         #buy_list = [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]
         final_list = bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c)
+        #final_list:保存最终选择买入的股票信息
         #final_list.columns = 8
         print ('选好的买入股票列表,type(final_list)',final_list,type(final_list))
         #保存股票代码和日期
@@ -734,11 +739,10 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit,save_path):
         st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[10]]))#settlement
         print('st_buy_matrix.columns',st_buy_matrix.shape[1])
         st_buy_matrix = np.column_stack((st_buy_matrix,choose_matrix1[:,[4,12,11,21]]))#open mean4_value 30_close close
-        print('st_buy_matrix.columns',st_buy_matrix)
+        #print('st_buy_matrix.columns',st_buy_matrix)
         '''之后如果要加上动态选股的，则把前面的加上 把下面这句话去掉。'''
         buy_matrix = st_buy_matrix
 
-        #选股的股票应该和买入的股票一样吗?
         '''排除今天卖出的股票
         可能前面一天没有文件 第一天 有则去除昨天买入的股票'''
 #        try:
@@ -757,7 +761,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit,save_path):
         '''
         同一个日期是同时进行股票的选股，买入和卖出的
         比如1月2号既要选股又要买入又要卖出
-        买入的是昨天选的股票，卖出的是前天选出的股票
+        买入的是昨天选的股票，卖出的是前天选出的股票（昨天买入的股票）
         1月2号选的股要在1月3号买入，在1月4号卖出
 
         特殊日期 买入后股票开盘涨停的卖出日期 不能在当天买入
@@ -765,13 +769,14 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit,save_path):
 
         special_df 记录了会买入的而且有卖出当天开盘涨停的股票 code day_aftertomo
         '''
-        sp_tmp = special_df[special_df['day_aftertomo'] == day] #会在卖出当天开盘涨停的股票
+        sp_tmp = special_df[special_df['day_aftertomo'] == day]
+        #会在卖出当天开盘涨停的股票要等到再下一个交易日卖出
 
         '''
         numpy库下的in1d函数:在序列B中寻找与序列A相同的值，并返回一逻辑值（True,False）或逻辑值构成的向量。
         notes:当invert=True时，两个序列不相同的部分为true，相同的部分则为false
         '''
-        buy_matrix = buy_matrix[np.in1d(buy_matrix[:,1],sp_tmp['code'].values,invert=True)]#去除掉今天开盘涨停的股票
+        buy_matrix = buy_matrix[np.in1d(buy_matrix[:,1],sp_tmp['code'].values,invert=True)]
         print ('buy_matrix.columns' ,buy_matrix.shape[1])
         try:
             df_buy = pd.DataFrame(buy_matrix,columns=['datetime','code','buy','buyPolicy','policy4_std', 'policy4_value', 'policy5_value', 'buy_open', 'buy_low', 'buy_high', 'st_or_dy',\
@@ -790,7 +795,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit,save_path):
         对选股的买入价格进行筛选 
         并且转化为卖出需要的格式 
         'code','buy','after_sign','day_tomo','day_aftertomo','totals1','settlement'
-        并且增加 有买入后一字涨停的股票的 code和day_aftertomo信息 到special_df
+        并且增加 有买入后一直涨停的股票的 code和day_aftertomo信息 到special_df
         如果通过买入价格筛选之后没有股票了，便将今天的利润记为0， continue
         '''
         df_buy1 = df_buy[~np.isnan(df_buy['buy'])][['code','buy','after_sign','day_tomo','day_aftertomo','totals1','settlement']]
@@ -1212,9 +1217,9 @@ print('读取分时数据')
 #获取分时数据
 fenshi_df = pd.read_csv(fenshi_path) #DataFrame
 
-#fenshi_df.rename(columns={'ts_code':'code'},inplace=True)
-#fenshi_df.rename(columns={'trade_time':'datetime','ts_code':'code'},inplace=True)
-#fenshi_df['code'] =fenshi_df['code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
+fenshi_df.rename(columns={'ts_code':'code'},inplace=True)
+fenshi_df.rename(columns={'trade_time':'datetime','ts_code':'code'},inplace=True)
+fenshi_df['code'] =fenshi_df['code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
 
 #过滤掉688开头的股票
 fenshi_df = fenshi_df.loc[(fenshi_df['code']<688000 )| (fenshi_df['code'] >=689000) ]
