@@ -15,21 +15,21 @@ from random import sample
 #start_date = '2020-01-01'
 #start_date_path = '20200101'
 #start_date_path = '20201101'
-start_date_path = '20180101'
-#start_date_path = '20200201'
+#start_date_path = '20180101'
+start_date_path = '20200101'
 #end_date = '2020-02-01'
 #end_date_path = '20200201'  
-#end_date_path = '20201201'
-end_date_path = '20181231'
-fill_date = '2020-12-01'
+end_date_path = '20201206'
+#end_date_path = '20181231'
+fill_date = '2020-12-06'
 
 data_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stockData/'+ start_date_path +'_'+end_date_path+'/'
 print(data_path)
+fenshi_path=data_path+'1216-fenshi20200101-20201206.csv'
+#fenshi_path = data_path + 'Fenshi'+start_date_path +'-'+end_date_path+'.csv'
+daily_path = data_path + 'new1_daily'+start_date_path +'-'+end_date_path+'.csv'
 
-fenshi_path = data_path + '1216-fenshi20180101-20181231.csv'
-daily_path = data_path + '1214-daily20180101_20181231.csv'
-
-results_data_path = data_path + '1216-results-'+ start_date_path +'_'+end_date_path +'-num5'
+results_data_path = data_path + '1223-results-'+ start_date_path +'_'+end_date_path +'-num5/'
 
 
 #Q
@@ -473,7 +473,7 @@ def bp_decision_ver3(choose_matrix1,lb_p,ub_p,para_c):
     return final_list
 
 
-def get_profit_update(data_path,sp,limit,dataset,data_result_path):
+def get_profit_update(data_path,sp,limit,dataset,save_path):
 
     data = dataset[['code','buy','sell','st_or_dy','num']]
     #有些静态选入的股票 并没有买入 所以要去除这一部分
@@ -516,7 +516,7 @@ def get_profit_update(data_path,sp,limit,dataset,data_result_path):
     #if (pro[-1]>=limit) & (result_buy.shape[0]>(d_length//8)):
     if (pro[-1]>=limit):
 
-        data_file = data_result_path
+        data_file = save_path
         mkdir(data_file)
         Data = result_buy[['profit','real_profit','buy_num','all_num','diff']]
         Data = Data.astype(float)
@@ -546,8 +546,8 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit,save_path):
 
     sp = "20200201-20201101/"
     data_file = data_path
-    data_file=save_path
-    data_result_choose_path = data_file + '/choose/'
+    data_file=results_data_path
+    data_result_choose_path = save_path + '/choose/'
     mkdir((data_result_choose_path))
     mkdir(data_file)
     mkdir(data_result_choose_path)
@@ -1067,7 +1067,7 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit,save_path):
     data['num'] = 1     #默认每只一份钱，留了个空位以防万一之后每只股票买的数量不一样多
     #print(data.head())
 
-    result_real_pro,data_file = get_profit_update(data_path,sp,limit,data,data_file)
+    result_real_pro,data_file = get_profit_update(data_path,sp,limit,data,save_path)
     l = result_real_pro.shape[0]
     #print (result_real_pro)
     
@@ -1075,15 +1075,15 @@ def make_stock_result_with_advanced_num(p,limit,hl_limit,save_path):
     print ('Final result : %f' % result_real_pro.iloc[l-1].loc['real_profit'])
     #if (result_real_pro.loc[l-1,'real_profit'] >= limit) & (l>(d_length//8)):
     if (result_real_pro.iloc[l-1].loc['real_profit'] >= limit):
-        final_choose_df.to_csv(data_file + '/' + 'choose.csv',index=False)
+        final_choose_df.to_csv(save_path + '/' + 'choose.csv',index=False)
         pro_df = pd.DataFrame(pro_list,columns=['pro'])
-        pro_df.to_csv(data_file + '/' + 'pro_test.csv',index=False)
+        pro_df.to_csv(save_path + '/' + 'pro_test.csv',index=False)
         pro_df1 = pd.DataFrame(pro_test,columns=['date','pro','advanced_level','signal','pro_sum','high_count','count','min_stock_num','buy_num','all_num','pro_yester'])
-        pro_df1.to_csv(data_file + '/' + 'pro_test_date.csv',index=False)
+        pro_df1.to_csv(save_path + '/' + 'pro_test_date.csv',index=False)
         
-        special_df.to_csv(data_file + '/special.csv')
+        special_df.to_csv(save_path + '/special.csv')
     
-        result_real_pro.to_csv(data_file + '/real_pro.csv',index=True)
+        result_real_pro.to_csv(save_path + '/real_pro.csv',index=True)
         
         result_real_pro.rename(columns={'real_profit':('rp')},inplace=True)
         show = result_real_pro['rp']
@@ -1217,9 +1217,9 @@ print('读取分时数据')
 #获取分时数据
 fenshi_df = pd.read_csv(fenshi_path) #DataFrame
 
-fenshi_df.rename(columns={'ts_code':'code'},inplace=True)
-fenshi_df.rename(columns={'trade_time':'datetime','ts_code':'code'},inplace=True)
-fenshi_df['code'] =fenshi_df['code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
+#fenshi_df.rename(columns={'ts_code':'code'},inplace=True)
+#fenshi_df.rename(columns={'trade_time':'datetime','ts_code':'code'},inplace=True)
+#fenshi_df['code'] =fenshi_df['code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
 
 #过滤掉688开头的股票
 fenshi_df = fenshi_df.loc[(fenshi_df['code']<688000 )| (fenshi_df['code'] >=689000) ]
@@ -1302,7 +1302,8 @@ if __name__ == '__main__':
     
     #ver1901-1907-0.03-1.0-10-2-8-4-50-30-300-40-4--0.001--0.001-0.07-0.082-0.96-0.96-1-9-600
 
-    para_good = [0.03,1,10,2,8,4,50,30,300,40,4,-0.001,-0.001,0.07, 0.082,0.96,0.96,1,5,600]
+    para_good = [0.03,1,10,2,8,4,50,15,300,40,4,-0.001,-0.001,0.07, 0.082,0.96,0.96,1,5,600]
+    #para_good=[0.03, 1.9, 10, 2, 8, 4, 70, 30, 1200, 40, 4, -0.001, -0.001, 0.07, 0.082, 0.96, 0.99, 1, 5, 600]
     '''
     iterNum = 1
     print(time.strftime('%Y-%m-%d-%H%M%S', time.localtime(time.time())))
@@ -1317,7 +1318,7 @@ if __name__ == '__main__':
     iterNum = 0
     print(time.strftime('%Y-%m-%d-%H%M%S', time.localtime(time.time())))
     state_time = time.strftime('%Y-%m-%d-%H%M%S', time.localtime(time.time()))
-    save_path = data_path + str(state_time) + '/'+ str(iterNum) + '/'
+    save_path = results_data_path + str(state_time) + '/'+ str(iterNum) + '/'
     mkdir(save_path)
     file_handle = open(save_path + '/para.txt', mode='w')
     file_handle.write(str(para_good))
@@ -1358,6 +1359,7 @@ if __name__ == '__main__':
             print (best_pro)
             print (best_para)
     '''
+    '''
     best_para = para_good
     para=best_para
     best_pro=result[len(result)-1]
@@ -1367,29 +1369,32 @@ if __name__ == '__main__':
     iter_count = 0
     t_para = best_para.copy()
     print('best_pro:'+str(best_pro))
-    while (best_pro <= 16000000)&(count < 100):
+
+    
+    while (best_pro <= 200)&(count < 30):
+        print(count)
         #iterNum = iterNum + 1
         #count 为选择邻域次数
         count += 1
         print ('***********************count**************************')
         print (count)
         iter_para = best_para.copy()
-        
+
         #邻域结构就是 中间两个随机选取的参数变动得到的所有参数组合
         para_change = sample(range(len(para_col)),2)
         while ((para_change[0] in lately_choose) | (para_change[1] in lately_choose) | \
         ((tabu_list[para_change[0]] + tabu_list[para_change[1]])>10)):
             para_change = sample(range(len(para_col)),2)
-            
+
         f = para_change[0]
         s = para_change[1]
-        
+
         #增加禁忌 使得上一次随机到的组合不再随机到
         #随机到次数组合多的不再 选中
         lately_choose = para_change
         tabu_list[f] += 1
         tabu_list[s] += 1
-        
+
         try:
             print (t_para[f])
         except IndexError:
@@ -1400,7 +1405,7 @@ if __name__ == '__main__':
                 t_para[s] = para2
                 para_tmp.append(t_para.copy())
         print (len(para_tmp))
-        
+
         #如果在邻域空间中搜索100次还没有任何改进 放弃该邻域空间 para_tmp存放所有的邻域结构
         count_inside = 0
         signal = 0
@@ -1412,7 +1417,7 @@ if __name__ == '__main__':
             iterNum = iterNum + 1
 
             #save_path = data_path + str(time.strftime('%Y-%m-%d-%H%M%S',time.localtime(time.time())))+'/'
-            save_path = data_path + str(state_time) + '/' + str(iterNum) + '/'
+            save_path = results_data_path + str(state_time) + '/' + str(iterNum) + '/'
             mkdir(save_path)
             file_handle = open(save_path + '/para.txt', mode='w')
             file_handle.write(str(i))
@@ -1440,7 +1445,7 @@ if __name__ == '__main__':
         if (iter_count >= 5):
             tabu_list = pd.Series([0 for i in range(len(para_col))])
             t_para = dist(para_col)
-    
+
     #print (results)
     end = time.perf_counter()
     print (str(end-start))
@@ -1450,3 +1455,4 @@ if __name__ == '__main__':
     for i in best_para:
         tmp_name = tmp_name+'-'+str(i)
     os.renames(data_path + tmp_name,data_path + 'Best-'+tmp_name)
+    '''
