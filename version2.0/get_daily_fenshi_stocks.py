@@ -30,11 +30,11 @@ pro = ts.pro_api()
 
 #给定下载日期，比如要测试19年11月到现在的数据，需要从19年10月开始下载
 #获取20200101-20201001之间的股票数据[0101,1001)
-start_date_bef = '20171201' #从当前日期开始下载
-start_date_rel = '20180101' #实际需要的起始日期
-end_date = '20190101' #实际的要获取股票数据的结束日期,获取结果不含该日期
+start_date_bef = '20191201' #从当前日期开始下载
+start_date_rel = '20200101' #实际需要的起始日期
+end_date = '20201210' #实际的要获取股票数据的结束日期,获取结果不含该日期
 
-top10_path = '../stockData/top10_2018.csv'
+top10_path = '../stockData/top10_2020.csv'
 saved_path = '../stockData/dataDownload/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
 daily_path = saved_path+'DailySingle/' #日线数据存储路径，一只股票一个文件
 fenshi_path = saved_path+'Fenshi/'
