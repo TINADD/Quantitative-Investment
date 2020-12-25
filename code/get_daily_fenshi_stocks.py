@@ -5,7 +5,7 @@ import datetime
 import time
 import numpy as np
 
-<<<<<<< HEAD
+
 token = '92fa5b4defcb65d71defd90b46b240ad77860cc3c0ec0958e492172d'
 ts.set_token(token)
 pro = ts.pro_api()
@@ -22,8 +22,7 @@ saved_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stock
 daily_path = saved_path+'DailySingle/' #日线数据存储路径，一只股票一个文件
 fenshi_path = saved_path+'Fenshi/'
 fenshi_single=fenshi_path+''
-=======
->>>>>>> b12a916b64d696487eab318662d2838e6428b071
+
 def mkdir(path):
  
 	folder = os.path.exists(path)
@@ -53,9 +52,11 @@ top10_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__))) + '/sto
 saved_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/stockdata/'+start_date_rel+'_'+end_date+'/' #当前程序下载的所有文件都存在此目录下
 daily_path = saved_path+'DailySingle/' #日线数据存储路径，一只股票一个文件
 fenshi_path = saved_path+'Fenshi/'
+fenshi_single_path=fenshi_path+'Single/'
 mkdir(saved_path)
 mkdir(daily_path)
 mkdir(fenshi_path)
+mkdir(fenshi_single_path)
 
 #Turn different time format to the datetime[64]
 def FormatTime(str_x):
@@ -63,11 +64,7 @@ def FormatTime(str_x):
         return pd.to_datetime(str_x,format="%Y%m%d")
     except ValueError:
         return pd.to_datetime(str_x)
- 
 
-mkdir(saved_path)
-mkdir(daily_path)
-mkdir(fenshi_path)
 
 #只获取上市的公司股票code
 #只获取上市的公司股票code
@@ -78,46 +75,44 @@ def get_minute_data():
     #获取交易日历
     #trade_cal = pro.trade_cal(exchange='', start_date=start_date_rel, end_date=end_date_rel)
     #过滤掉不交易日期
-<<<<<<< HEAD
+    '''
     trade_cal = trade_cal[trade_cal.is_open == 1]
     print(trade_cal)
     date_list = list(trade_cal.cal_date)
-=======
+    '''
     #trade_cal = trade_cal[trade_cal.is_open == 1]
     #date_list = list(trade_cal.cal_date)
->>>>>>> b12a916b64d696487eab318662d2838e6428b071
 
     stocks_minute = pd.DataFrame() #记录所有股票的分时数据 1min
-    flag=1
     for code in stock_basic['ts_code']:
-<<<<<<< HEAD
-        print(code)
-        try:
-            code_min = ts.pro_bar(ts_code=code, adj='qfq',start_date=start_date_rel, end_date=end_date_rel, freq='1min')
-        except:
-            time.sleep(1)
-            code_min = ts.pro_bar(ts_code=code, adj='qfq',start_date=start_date_rel, end_date=end_date_rel, freq='1min')
-        if(code_min is None):
-            print('code_min is None')
-            print(code_min)
-            continue
-=======
+
         code_min = pd.DataFrame()
-        for i in range(1,8):
+        if (os.path.exists(fenshi_single_path + code + '.csv')and os.path.getsize(fenshi_single_path  + code + '.csv')>10000):
+            print('股票分时数据已存在', code)
+            code_min = pd.read_csv(fenshi_single_path + code + '.csv')
+            stocks_minute=pd.concat([code_min, stocks_minute])
+            continue
+        for i in range(7,12):
             start_date_rel = '20200'+str(i)+'01'
-            end_date = '20200' + str(i+1)+'01'
+            if(i>=10):
+                start_date_rel = '2020' + str(i) + '01'
+            end_date = '20200' + str(i + 1) + '01'
+            if(i+1>=10):
+                end_date = '2020' + str(i + 1) + '01'
+
             end_date_rel = (datetime.datetime.strptime(end_date,'%Y%m%d') +  datetime.timedelta(days=1)).strftime('%Y%m%d')
             try:
                 code_min_tmp = ts.pro_bar(ts_code=code, adj='qfq',start_date=start_date_rel, end_date=end_date_rel, freq='1min')
             except:
                 time.sleep(1)
                 code_min_tmp = ts.pro_bar(ts_code=code, adj='qfq',start_date=start_date_rel, end_date=end_date_rel, freq='1min')
-            if(code_min is None):
+            if(code_min_tmp is None):
                 print('code_min is None')
                 print(code_min)
                 continue
             code_min = pd.concat([code_min,code_min_tmp])
->>>>>>> b12a916b64d696487eab318662d2838e6428b071
+        if(code_min is None):
+            continue
         #print(code_min)
         code_min['trade_time'] = pd.to_datetime(code_min['trade_time'])
         code_min['date'] = code_min['trade_time'].apply(lambda x:x.date())
@@ -126,16 +121,14 @@ def get_minute_data():
         code_min.time = code_min.time.astype(str)
         code_min = code_min[code_min.time<='11:00:00']
         code_min = code_min[['trade_time','ts_code','open','close','high','low','date','time']]
-        code_min.to_csv(saved_path+code+'.csv')
+        code_min.to_csv(fenshi_single_path+code+'.csv')
         print(code_min['date'])
         stocks_minute = pd.concat([stocks_minute,code_min])
-        if(flag):
-            print(code_min)
-            flag=0
 
     stocks_minute['ts_code'] =stocks_minute['ts_code'].apply(lambda x: int(x.replace('.SH', '').replace('.SZ', '')))
     #修改列名
     stocks_minute.rename(columns={'trade_time':'datetime','ts_code':'code'},inplace=True)
+    stocks_minute.drop(['Unnamed:0'],axis=1,inplace=True)
     print('写分时数据...')    
     stocks_minute.to_csv(saved_path+'Fenshi'+start_date_rel+'-'+end_date+'.csv')
 
@@ -284,10 +277,6 @@ def get_daily_data():
     stocks_daily.rename(columns={'close_highest':'30_close_highest','cp_sum_five':'cp_sum'},inplace=True)
     #删除多余日期的股票
     stocks_daily_final = stocks_daily[pd.to_datetime(stocks_daily['datetime'],format="%Y/%m/%d")>= pd.to_datetime(start_date_rel,format="%Y/%m/%d")]
-<<<<<<< HEAD
-=======
-    
->>>>>>> b12a916b64d696487eab318662d2838e6428b071
     stocks_daily_final['mean_value2_hl_before'] = stocks_daily_final['mean_value4_before']
     stocks_daily_final['mean_value_oc_before'] = stocks_daily_final['mean_value4_before']
     stocks_daily_final = stocks_daily_final[['datetime','code','totals1','policy3','open','high','mean_value2_hl_before','policy1','policy2','tr_before',\
